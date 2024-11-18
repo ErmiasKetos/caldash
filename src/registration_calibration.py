@@ -1,80 +1,96 @@
 import streamlit as st
-from datetime import timedelta
 
 def registration_calibration_page():
     st.title("Probe Registration & Calibration")
 
-    # CSS for styling
-    st.markdown('<div class="main-container">', unsafe_allow_html=True)
-
-    # Section 1: Probe Information
-    st.markdown('<div class="section-title">Probe Information</div>', unsafe_allow_html=True)
+    # General Section: Probe Information
+    st.subheader("Probe Information")
     col1, col2 = st.columns(2)
     with col1:
         manufacturer = st.text_input("Manufacturer")
-        mfg_date = st.date_input("Mfg Date")
-        mfg_pn = st.text_input("Mfg P/N")
-        ketos_pn = st.text_input("KETOS P/N")
+        manufacturing_date = st.date_input("Manufacturing Date")
+        manufacturer_part_number = st.text_input("Manufacturer Part Number")
+        ketos_part_number = st.text_input("KETOS Part Number")
     with col2:
-        probe_type = st.selectbox("Probe Type", ["pH", "DO", "ORP", "EC", "Temperature"])
+        probe_type = st.selectbox("Probe Type", ["pH", "DO", "ORP", "EC"])
         assigned_to = st.text_input("Assigned To")
         calibration_date = st.date_input("Calibration Date")
         calibration_time = st.time_input("Calibration Time")
 
     # Serial Number Generation
-    expected_service_life = 2  # Example default value
-    expire_date = mfg_date + timedelta(days=expected_service_life * 365)
-    expire_yymm = expire_date.strftime("%y%m")
-    serial_number = f"{probe_type}_{expire_yymm}_00001"
-    st.text(f"Generated Serial Number: {serial_number}")
+    st.text("Generated Serial Number: AUTO_GENERATED")
 
-    # Section 2: Calibration Details
-    st.markdown('<div class="section-title">Calibration Details</div>', unsafe_allow_html=True)
+    # Dynamic Sections Based on Probe Type
     if probe_type == "pH":
-        st.markdown('<div class="sub-section-title">pH Calibration</div>', unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            ph4_control = st.text_input("pH Buffer 4 Control Number")
-            ph4_expiration = st.date_input("pH Buffer 4 Expiration")
-            ph4_opened = st.date_input("pH Buffer 4 Date Opened")
-            ph7_control = st.text_input("pH Buffer 7 Control Number")
-            ph7_expiration = st.date_input("pH Buffer 7 Expiration")
-            ph7_opened = st.date_input("pH Buffer 7 Date Opened")
-        with col2:
-            ph10_control = st.text_input("pH Buffer 10 Control Number")
-            ph10_expiration = st.date_input("pH Buffer 10 Expiration")
-            ph10_opened = st.date_input("pH Buffer 10 Date Opened")
-            ph4_initial = st.number_input("pH 4 Initial Measurement", value=0.0)
-            ph4_calibrated = st.number_input("pH 4 Calibrated Measurement", value=0.0)
-
+        render_ph_calibration()
     elif probe_type == "DO":
-        st.markdown('<div class="sub-section-title">DO Calibration</div>', unsafe_allow_html=True)
-        barometric_pressure = st.number_input("Barometric Pressure", value=0.0)
-        temperature = st.number_input("Temperature", value=0.0)
-        initial_measurement = st.number_input("Initial Measurement", value=0.0)
-        calibrated_measurement = st.number_input("Calibrated Measurement", value=0.0)
-        membrane_date = st.date_input("Membrane Replacement Date")
-        next_change_date = st.date_input("Next Membrane Change")
-
+        render_do_calibration()
     elif probe_type == "ORP":
-        st.markdown('<div class="sub-section-title">ORP Calibration</div>', unsafe_allow_html=True)
-        orp_buffer = st.text_input("Buffer Solution")
-        orp_temp = st.number_input("Temperature", value=0.0)
-        orp_initial = st.number_input("Initial Measurement", value=0.0)
-        orp_calibrated = st.number_input("Calibrated Measurement", value=0.0)
-        orp_qa = st.text_input("QA Details")
-
+        render_orp_calibration()
     elif probe_type == "EC":
-        st.markdown('<div class="sub-section-title">Specific Conductance Calibration</div>', unsafe_allow_html=True)
-        sc_standard = st.text_input("Standard Solution")
-        sc_temp = st.number_input("Temperature", value=0.0)
-        sc_initial = st.number_input("Initial Measurement", value=0.0)
-        sc_calibrated = st.number_input("Calibrated Measurement", value=0.0)
-        sc_qa = st.text_input("QA Details")
+        render_ec_calibration()
 
     # Save Button
     if st.button("Save"):
-        # Here you can save data to a local CSV or database
-        st.success("Probe Registered and Calibrated Successfully!")
+        st.success("Data saved successfully!")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_ph_calibration():
+    st.subheader("pH Calibration")
+    for buffer_label, tag_color in [("pH 4", "red"), ("pH 7", "green"), ("pH 10", "blue")]:
+        with st.container():
+            st.markdown(f"### {buffer_label} Buffer")
+            control_number = st.text_input(f"{buffer_label} Control Number")
+            expiration_date = st.date_input(f"{buffer_label} Expiration Date")
+            date_opened = st.date_input(f"{buffer_label} Date Opened")
+            initial = st.number_input(f"{buffer_label} Initial Measurement (pH)")
+            calibrated = st.number_input(f"{buffer_label} Calibrated Measurement (pH)")
+            mv = st.number_input(f"{buffer_label} mV")
+
+
+def render_do_calibration():
+    st.subheader("DO Calibration")
+    st.markdown("### Temperature")
+    initial_temp = st.number_input("Initial Temperature (°C)")
+    calibrated_temp = st.number_input("Calibrated Temperature (°C)")
+
+    st.markdown("### 0% DO Calibration")
+    zero_control_number = st.text_input("0% DO Control Number")
+    zero_expiration_date = st.date_input("0% DO Expiration Date")
+    zero_date_opened = st.date_input("0% DO Date Opened")
+    zero_initial = st.number_input("0% DO Initial Measurement (%)")
+    zero_calibrated = st.number_input("0% DO Calibrated Measurement (%)")
+
+    st.markdown("### 100% DO Calibration")
+    hundred_initial = st.number_input("100% DO Initial Measurement (%)")
+    hundred_calibrated = st.number_input("100% DO Calibrated Measurement (%)")
+
+
+def render_orp_calibration():
+    st.subheader("ORP Calibration")
+    st.markdown("### Temperature")
+    initial_temp = st.number_input("Initial Temperature (°C)")
+    calibrated_temp = st.number_input("Calibrated Temperature (°C)")
+
+    st.markdown("### 240 mV Calibration")
+    control_number = st.text_input("240 mV Control Number")
+    expiration_date = st.date_input("240 mV Expiration Date")
+    date_opened = st.date_input("240 mV Date Opened")
+    initial_orp = st.number_input("240 mV Initial Measurement (mV)")
+    calibrated_orp = st.number_input("240 mV Calibrated Measurement (mV)")
+
+
+def render_ec_calibration():
+    st.subheader("Specific Conductance (EC) Calibration")
+    st.markdown("### Temperature")
+    initial_temp = st.number_input("Initial Temperature (°C)")
+    calibrated_temp = st.number_input("Calibrated Temperature (°C)")
+
+    for label, unit in [("84 μS/cm", "Low Point"), ("1413 μS/cm", "Mid Point"), ("12.88 mS/cm", "High Point")]:
+        with st.container():
+            st.markdown(f"### {label} Calibration")
+            control_number = st.text_input(f"{label} Control Number")
+            expiration_date = st.date_input(f"{label} Expiration Date")
+            date_opened = st.date_input(f"{label} Date Opened")
+            initial_value = st.number_input(f"{label} Initial Measurement ({unit})")
+            calibrated_value = st.number_input(f"{label} Calibrated Measurement ({unit})")
