@@ -4,7 +4,7 @@ import pandas as pd
 def inventory_review_page():
     st.title("Inventory Review")
 
-    # Mock data (replace with your data source)
+    # Example inventory data
     data = pd.DataFrame({
         "Serial Number": ["pH_2211_00001"],
         "Manufacturer": ["Test Manufacturer"],
