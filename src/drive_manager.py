@@ -91,68 +91,68 @@ class DriveManager:
             logger.error(f"Failed to load inventory from Drive: {str(e)}")
             return None
 
-def save_to_drive(self, inventory_df, folder_id):
-    """Save or update inventory to Google Drive, appending new records."""
-    try:
-        if not self.service:
-            logger.error("Drive service not initialized")
-            return False
+    def save_to_drive(self, inventory_df, folder_id):
+        """Save or update inventory to Google Drive, appending new records."""
+        try:
+            if not self.service:
+                logger.error("Drive service not initialized")
+                return False
 
-        # Load existing data
-        existing_inventory = self.load_inventory_from_drive(folder_id)
+            # Load existing data
+            existing_inventory = self.load_inventory_from_drive(folder_id)
 
-        # Merge new data with existing inventory
-        if existing_inventory is not None:
-            inventory_df = pd.concat([existing_inventory, inventory_df]).drop_duplicates(
-                subset="Serial Number", keep="last"
+            # Merge new data with existing inventory
+            if existing_inventory is not None:
+                inventory_df = pd.concat([existing_inventory, inventory_df]).drop_duplicates(
+                    subset="Serial Number", keep="last"
+                )
+
+            # Save the merged inventory back to the drive
+            temp_file = INVENTORY_FILENAME
+            inventory_df.to_csv(temp_file, index=False)
+
+            # Prepare file metadata and media
+            file_metadata = {
+                'name': INVENTORY_FILENAME,
+                'mimeType': 'text/csv'
+            }
+
+            media = MediaFileUpload(
+                temp_file,
+                mimetype='text/csv',
+                resumable=True
             )
 
-        # Save the merged inventory back to the drive
-        temp_file = INVENTORY_FILENAME
-        inventory_df.to_csv(temp_file, index=False)
+            # Check if file exists
+            file_id = self.get_file_id(folder_id, INVENTORY_FILENAME)
 
-        # Prepare file metadata and media
-        file_metadata = {
-            'name': INVENTORY_FILENAME,
-            'mimeType': 'text/csv'
-        }
+            if file_id:
+                # Update existing file
+                self.service.files().update(
+                    fileId=file_id,
+                    media_body=media,
+                    fields='id'
+                ).execute()
+                logger.info("Updated existing inventory file in Drive")
+            else:
+                # Create new file
+                file_metadata['parents'] = [folder_id]
+                self.service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
+                logger.info("Created new inventory file in Drive")
 
-        media = MediaFileUpload(
-            temp_file,
-            mimetype='text/csv',
-            resumable=True
-        )
+            # Clean up temporary file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
-        # Check if file exists
-        file_id = self.get_file_id(folder_id, INVENTORY_FILENAME)
+            return True
 
-        if file_id:
-            # Update existing file
-            self.service.files().update(
-                fileId=file_id,
-                media_body=media,
-                fields='id'
-            ).execute()
-            logger.info("Updated existing inventory file in Drive")
-        else:
-            # Create new file
-            file_metadata['parents'] = [folder_id]
-            self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
-            logger.info("Created new inventory file in Drive")
-
-        # Clean up temporary file
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Failed to save to Drive: {str(e)}")
-        return False
+        except Exception as e:
+            logger.error(f"Failed to save to Drive: {str(e)}")
+            return False
 
     def create_backup(self, inventory_df, folder_id):
         """Create backup of inventory file"""
