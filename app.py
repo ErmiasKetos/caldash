@@ -4,8 +4,8 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 
 # Initialize Google Drive authentication
 def authenticate_google_drive():
