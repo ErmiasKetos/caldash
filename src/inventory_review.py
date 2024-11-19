@@ -34,7 +34,7 @@ def inventory_review_page():
             use_container_width=True
         )
     else:
-    st.info("No records found for the selected filter.")
+        st.info("No records found for the selected filter.")
     
     # Status update section
     if not st.session_state.inventory.empty:
