@@ -41,6 +41,18 @@ class DriveManager:
             fields='id'
         ).execute()
 
+def check_user_auth():
+    if 'credentials' not in st.session_state:
+        flow = Flow.from_client_config(
+            client_config=CLIENT_CONFIG,
+            scopes=SCOPES,
+            redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+        )
+        authorization_url, _ = flow.authorization_url(prompt="consent")
+        st.markdown(f"[Login with Google]({authorization_url})")
+        return False
+    return True
+
 def periodic_save(inventory, file_path, drive_manager, drive_folder_id):
     while True:
         time.sleep(600)  # 10 minutes
@@ -53,17 +65,6 @@ def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
     inventory.to_csv(backup_path, index=False)
     if drive_manager and drive_manager.service:
         drive_manager.save_to_drive(file_path, drive_folder_id)
-
-def check_user_auth():
-        if 'credentials' in st.session_state and st.session_state['credentials'].valid: return True
-        flow = Flow.from_client_config(
-            client_config=CLIENT_CONFIG,
-            scopes=SCOPES,
-            redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
-        )
-        authorization_url, _ = flow.authorization_url(prompt="consent")
-        st.markdown(f"[Login with Google]({authorization_url})")
-        return True
 
 # Initialize session state
 if 'inventory' not in st.session_state:
@@ -87,40 +88,28 @@ if 'save_thread' not in st.session_state:
     save_thread.start()
     st.session_state.save_thread = save_thread
 
-# Title of the App
+# Set page config
 st.set_page_config(page_title="Probe Management System", layout="wide")
 
-# Main app
 def main():
     st.sidebar.title("CalMS")
     
     # Handle OAuth 2.0 callback
-params = st.experimental_get_query_params()
-if 'code' in params:
+    if 'code' in st.experimental_get_query_params():
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
-        try:
-            flow.fetch_token(code=params['code'][0])
-            st.session_state['credentials'] = flow.credentials
-            # Clear query parameters after successful auth
-            st.experimental_set_query_params()
-            return True
-        except Exception as e:
-            st.error(f"Authentication failed: {str(e)}")
-            return False
+        flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
+        st.session_state['credentials'] = flow.credentials
+        # Clear query parameters after successful auth
+        st.experimental_set_query_params()
+        st.experimental_rerun()
 
-    # If not authenticated, show login button
-      flow = Flow.from_client_config(
-        client_config=CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
-    )
-    authorization_url, _ = flow.authorization_url(prompt="consent")
-    st.markdown(f"[Login with Google]({authorization_url})")
-    return False
+    if not check_user_auth():
+        st.write("Please log in to access the application.")
+        return
 
     # Get user info
     user_info_service = build('oauth2', 'v2', credentials=st.session_state['credentials'])
@@ -129,25 +118,20 @@ if 'code' in params:
     if not user_info['email'].endswith('@ketos.co'):
         st.error("Access denied. Please use your @ketos.co email to log in.")
         if st.button("Logout"):
-            st.session_state.pop('credentials', None)
+            st.session_state.clear()
+            st.experimental_set_query_params()
             st.experimental_rerun()
         return
 
     st.sidebar.text(f"Logged in as: {user_info['name']}")
-    if st.sidebar.button("Logout"):
-        st.session_state.pop('credentials', None)
-        st.experimental_rerun()
-
-    # Authenticate DriveManager
-    st.session_state.drive_manager.authenticate(st.session_state['credentials'])
-
-    # App Navigation
+    
+    # Navigation
     page = st.sidebar.radio(
-        "Navigate",
-        ["Probe Registration & Calibration", "Inventory Review"],
+        "Navigate to",
+        ["Registration & Calibration", "Inventory Review"]
     )
-
-    if page == "Probe Registration & Calibration":
+    
+    if page == "Registration & Calibration":
         registration_calibration_page()
     elif page == "Inventory Review":
         inventory_review_page()
