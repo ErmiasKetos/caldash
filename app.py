@@ -118,7 +118,8 @@ def main():
         # Check if 'code' exists in query params for OAuth flow
         if 'code' in st.experimental_get_query_params():
             if init_google_auth():
-                st.experimental_rerun()  # Re-render after authentication
+                st.experimental_set_query_params()  # Clear query params
+                st.stop()  # Stop execution and allow re-rendering
             return
 
         # Check if user is already authenticated
@@ -138,13 +139,14 @@ def main():
                 if st.button("Logout"):
                     st.session_state.clear()
                     st.experimental_set_query_params()
-                    st.experimental_rerun()
+                    st.stop()
                 return
         except Exception as e:
             logger.error(f"Error fetching user info: {str(e)}")
             st.error("Authentication error. Please try logging in again.")
             st.session_state.clear()
-            st.experimental_rerun()
+            st.experimental_set_query_params()
+            st.stop()
 
         # Sidebar options
         with st.sidebar.expander("Google Drive Settings"):
@@ -176,7 +178,8 @@ def main():
         logger.error(f"Session error: {str(e)}")
         st.error(f"An error occurred: {str(e)}")
         st.session_state.clear()
-        st.experimental_rerun()
+        st.experimental_set_query_params()
+        st.stop()
 
 
 if __name__ == "__main__":
