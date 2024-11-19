@@ -12,6 +12,8 @@ from datetime import datetime
 from src.registration_calibration import registration_calibration_page
 from src.drive_manager import DriveManager, save_inventory
 from src.inventory_review import inventory_review_page
+from src.inventory_manager import initialize_inventory
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -232,7 +234,8 @@ def main():
                 st.experimental_set_query_params()
                 st.rerun()
             return
-
+            
+        initialize_inventory()
         st.sidebar.text(f"Logged in as: {user_info['name']}")
         
         # Google Drive Settings in sidebar
