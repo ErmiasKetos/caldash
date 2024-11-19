@@ -80,6 +80,7 @@ def init_google_auth():
 
         flow.fetch_token(code=params['code'][0])
         st.session_state['credentials'] = flow.credentials
+        st.experimental_set_query_params()
 
         # Initialize Drive manager with new credentials
         if 'drive_manager' not in st.session_state:
@@ -95,9 +96,7 @@ def init_google_auth():
             logger.info(f"Drive folder access verified for folder ID: {DRIVE_FOLDER_ID}")
         else:
             st.warning("⚠️ Drive folder access verification failed. Check permissions.")
-
-        # Clear query params to prevent re-execution
-        st.experimental_set_query_params()
+            
 
         # Set the user as authenticated
         st.session_state['authenticated'] = True
@@ -115,35 +114,37 @@ def init_google_auth():
 def main():
     try:
         st.sidebar.title("CalMS")
+
+        # Check if 'code' exists in query params for OAuth flow
         if 'code' in st.experimental_get_query_params():
             if init_google_auth():
-                st.session_state['authenticated'] = True
-                st.experimental_rerun()  # Rerun the app after successful authentication
-
+                st.experimental_rerun()  # Re-render after authentication
             return
 
+        # Check if user is already authenticated
         if not check_user_auth():
             st.write("Please log in to access the application.")
             return
 
-        # User info
+        # Fetch user info and validate email domain
         try:
             user_info_service = build('oauth2', 'v2', credentials=st.session_state['credentials'])
             user_info = user_info_service.userinfo().get().execute()
-            if not user_info['email'].endswith('@ketos.co'):
+
+            if user_info['email'].endswith('@ketos.co'):
+                st.sidebar.text(f"Logged in as: {user_info['name']}")
+            else:
                 st.error("Access denied. Please use your @ketos.co email.")
                 if st.button("Logout"):
                     st.session_state.clear()
                     st.experimental_set_query_params()
-                    st.rerun()
+                    st.experimental_rerun()
                 return
-
-            st.sidebar.text(f"Logged in as: {user_info['name']}")
         except Exception as e:
-            logger.error(f"Error getting user info: {str(e)}")
+            logger.error(f"Error fetching user info: {str(e)}")
             st.error("Authentication error. Please try logging in again.")
             st.session_state.clear()
-            st.rerun()
+            st.experimental_rerun()
 
         # Sidebar options
         with st.sidebar.expander("Google Drive Settings"):
@@ -158,21 +159,25 @@ def main():
             else:
                 st.warning("⚠️ Drive folder not configured.")
 
-        # Page navigation
-        page = st.sidebar.radio(
-            "Navigate to",
-            ["Registration & Calibration", "Inventory Review"]
-        )
-        if page == "Registration & Calibration":
-            registration_calibration_page()
-        elif page == "Inventory Review":
-            inventory_review_page()
+        # Navigation for authenticated users
+        if 'authenticated' in st.session_state and st.session_state['authenticated']:
+            page = st.sidebar.radio(
+                "Navigate to",
+                ["Registration & Calibration", "Inventory Review"]
+            )
+            if page == "Registration & Calibration":
+                registration_calibration_page()
+            elif page == "Inventory Review":
+                inventory_review_page()
+        else:
+            st.write("Please log in to access the application.")
 
     except Exception as e:
         logger.error(f"Session error: {str(e)}")
         st.error(f"An error occurred: {str(e)}")
         st.session_state.clear()
-        st.rerun()
+        st.experimental_rerun()
+
 
 if __name__ == "__main__":
     try:
