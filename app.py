@@ -57,6 +57,18 @@ class DriveManager:
             st.error(f"Drive authentication failed: {str(e)}")
             return False
 
+    def verify_folder_access(self, folder_id):
+        """Verify if the folder exists and is accessible"""
+        try:
+            if not self.service:
+                return False
+            
+            self.service.files().get(fileId=folder_id).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to verify folder access: {str(e)}")
+            return False
+
     def save_to_drive(self, file_path, drive_folder_id):
         """Save file to Google Drive in specified folder"""
         if not os.path.exists(file_path):
@@ -92,11 +104,38 @@ class DriveManager:
             st.error(f"Failed to save to Drive: {str(e)}")
             return False
 
-def handle_session_error():
-    """Handle session errors by clearing state and rerunning"""
-    st.session_state.clear()
-    st.experimental_set_query_params()
-    st.rerun()  # Updated from experimental_rerun
+def save_inventory(inventory, file_path, drive_manager=None):
+    """Save inventory to local file and Google Drive"""
+    try:
+        # Save locally
+        inventory.to_csv(file_path, index=False)
+        logger.info(f"Inventory saved locally: {file_path}")
+        
+        # Create backup with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
+        inventory.to_csv(backup_path, index=False)
+        logger.info(f"Backup created: {backup_path}")
+        
+        # Save to Drive if available
+        if drive_manager and drive_manager.service and 'drive_folder_id' in st.session_state:
+            success = drive_manager.save_to_drive(file_path, st.session_state.drive_folder_id)
+            if success:
+                st.success("Inventory saved to Google Drive")
+            
+    except Exception as e:
+        logger.error(f"Failed to save inventory: {str(e)}")
+        st.error(f"Failed to save inventory: {str(e)}")
+
+def periodic_save():
+    """Periodically save inventory"""
+    while True:
+        try:
+            time.sleep(600)  # 10 minutes
+            if 'inventory' in st.session_state and 'drive_manager' in st.session_state:
+                save_inventory(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager)
+        except Exception as e:
+            logger.error(f"Periodic save failed: {str(e)}")
 
 def check_user_auth():
     """Check and handle user authentication"""
@@ -139,6 +178,10 @@ def init_google_auth():
             if 'drive_manager' in st.session_state:
                 st.session_state.drive_manager.authenticate(flow.credentials)
             
+            # Set default Drive folder
+            if 'drive_folder_id' not in st.session_state:
+                st.session_state.drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+            
             # Clear URL parameters
             st.experimental_set_query_params()
             logger.info("Google authentication initialized successfully")
@@ -151,38 +194,6 @@ def init_google_auth():
             return False
     return False
 
-def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
-    """Save inventory to local file and Google Drive"""
-    try:
-        # Save locally
-        inventory.to_csv(file_path, index=False)
-        logger.info(f"Inventory saved locally: {file_path}")
-        
-        # Create backup with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
-        inventory.to_csv(backup_path, index=False)
-        logger.info(f"Backup created: {backup_path}")
-        
-        # Save to Drive if available
-        if drive_manager and drive_manager.service:
-            success = drive_manager.save_to_drive(file_path, drive_folder_id)
-            if success:
-                st.success("Inventory saved to Google Drive")
-            
-    except Exception as e:
-        logger.error(f"Failed to save inventory: {str(e)}")
-        st.error(f"Failed to save inventory: {str(e)}")
-
-def periodic_save(inventory, file_path, drive_manager, drive_folder_id):
-    """Periodically save inventory"""
-    while True:
-        try:
-            time.sleep(600)  # 10 minutes
-            save_inventory(inventory, file_path, drive_manager, drive_folder_id)
-        except Exception as e:
-            logger.error(f"Periodic save failed: {str(e)}")
-
 def main():
     try:
         st.sidebar.title("CalMS")
@@ -194,7 +205,7 @@ def main():
         # Check for auth code in URL
         if 'code' in st.experimental_get_query_params():
             if init_google_auth():
-                st.rerun()  # Updated from experimental_rerun
+                st.rerun()
             return
 
         # Check if already authenticated
@@ -209,11 +220,32 @@ def main():
         if not user_info['email'].endswith('@ketos.co'):
             st.error("Access denied. Please use your @ketos.co email to log in.")
             if st.button("Logout"):
-                handle_session_error()
+                st.session_state.clear()
+                st.experimental_set_query_params()
+                st.rerun()
             return
 
         st.sidebar.text(f"Logged in as: {user_info['name']}")
         
+        # Google Drive Settings in sidebar
+        with st.sidebar.expander("Google Drive Settings"):
+            if 'drive_folder_id' not in st.session_state:
+                st.session_state.drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+            
+            current_folder = st.session_state.drive_folder_id
+            new_folder_id = st.text_input(
+                "Google Drive Folder ID",
+                value=current_folder,
+                help="ID from your Google Drive folder URL"
+            )
+            
+            if new_folder_id != current_folder:
+                if st.session_state.drive_manager.verify_folder_access(new_folder_id):
+                    st.session_state.drive_folder_id = new_folder_id
+                    st.success("✅ Folder access verified!")
+                else:
+                    st.error("❌ Cannot access this folder. Please check the ID and permissions.")
+
         # Navigation
         page = st.sidebar.radio(
             "Navigate to",
@@ -228,7 +260,8 @@ def main():
     except Exception as e:
         logger.error(f"Session error: {str(e)}")
         st.error(f"An error occurred: {str(e)}")
-        handle_session_error()
+        st.session_state.clear()
+        st.rerun()
 
 if __name__ == "__main__":
     try:
@@ -254,6 +287,13 @@ if __name__ == "__main__":
         if 'drive_manager' not in st.session_state:
             st.session_state.drive_manager = DriveManager()
             logger.info("Drive manager initialized")
+
+        # Start periodic save thread
+        if 'save_thread' not in st.session_state:
+            save_thread = threading.Thread(target=periodic_save, daemon=True)
+            save_thread.start()
+            st.session_state.save_thread = save_thread
+            logger.info("Periodic save thread started")
         
         main()
         
