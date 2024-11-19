@@ -30,11 +30,11 @@ STATUS_COLORS = {
 def initialize_inventory():
     """Initialize or load existing inventory"""
     try:
-        if 'inventory' not in st.session_state:
+        if 'inventory' not in st.session_state or st.session_state.inventory.empty:
             logger.info("Initializing inventory...")
             # Try to load from Drive first
             if 'drive_manager' in st.session_state:
-                df = st.session_state.drive_manager.load_inventory_from_drive(BACKUP_FOLDER_ID)
+                df = st.session_state.drive_manager.load_inventory_from_drive(BACKUP_FOLDER_ID, limit=100)
                 if df is not None:
                     # Ensure all required columns exist
                     required_columns = [
@@ -54,7 +54,7 @@ def initialize_inventory():
                                 df[col] = ''
                     
                     st.session_state.inventory = df
-                    logger.info(f"Loaded existing inventory with {len(df)} records")
+                    logger.info(f"Loaded {len(df)} records from existing inventory")
                 else:
                     # Create new inventory if none exists
                     st.session_state.inventory = pd.DataFrame(columns=[
@@ -163,11 +163,12 @@ def get_filtered_inventory(status_filter="All"):
         logger.error(f"Error filtering inventory: {str(e)}")
         return pd.DataFrame()
 
+@st.cache_data
 def style_inventory_dataframe(df):
     """Apply color styling to inventory dataframe"""
     try:
         def color_rows(row):
-            return [f"background-color: {row['Status Color']}"] * len(row)
+            return ['background-color: {}'.format(row['Status Color']) for _ in row]
         
         return df.style.apply(color_rows, axis=1)
     except Exception as e:
