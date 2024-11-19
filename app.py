@@ -142,6 +142,7 @@ def check_user_auth():
             return False
     return True
 
+# Update the init_google_auth function:
 def init_google_auth():
     """Initialize Google authentication"""
     try:
@@ -166,8 +167,15 @@ def init_google_auth():
         st.session_state.drive_manager.authenticate(flow.credentials)
         
         # Set default Drive folder
-        if 'drive_folder_id' not in st.session_state:
-            st.session_state['drive_folder_id'] = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+        st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
+        
+        # Verify folder access
+        if st.session_state.drive_manager.verify_folder_access(DRIVE_FOLDER_ID):
+            logger.info(f"Successfully verified access to folder: {DRIVE_FOLDER_ID}")
+            st.success("✅ Drive folder access verified")
+        else:
+            logger.warning("Could not verify folder access")
+            st.warning("⚠️ Could not verify Drive folder access. Please check permissions.")
         
         # Clear URL parameters
         st.experimental_set_query_params()
@@ -181,42 +189,7 @@ def init_google_auth():
             del st.session_state['credentials']
         return False
 
-def save_inventory(inventory_df, file_path, drive_manager=None):
-    """Save inventory to local file and Google Drive"""
-    try:
-        # Save locally
-        inventory_df.to_csv(file_path, index=False)
-        logger.info(f"Inventory saved locally: {file_path}")
-        
-        # Create backup with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
-        inventory_df.to_csv(backup_path, index=False)
-        logger.info(f"Backup created: {backup_path}")
-        
-        # Save to Drive if available
-        if drive_manager and drive_manager.service and 'drive_folder_id' in st.session_state:
-            folder_id = st.session_state.drive_folder_id
-            if folder_id:
-                logger.info(f"Attempting to save to Drive folder: {folder_id}")
-                if drive_manager.save_to_drive(file_path, folder_id):
-                    st.success("✅ File saved to Google Drive successfully")
-                    return True
-                else:
-                    st.error("❌ Failed to save to Google Drive")
-                    return False
-            else:
-                st.warning("⚠️ No Google Drive folder configured")
-                return False
-        else:
-            st.info("ℹ️ Google Drive integration not available")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Failed to save inventory: {str(e)}")
-        st.error(f"Failed to save inventory: {str(e)}")
-        return False
-
+# Update the Google Drive Settings section in main():
 def main():
     try:
         st.sidebar.title("CalMS")
@@ -263,24 +236,23 @@ def main():
 
             st.sidebar.text(f"Logged in as: {user_info['name']}")
             
-            # Google Drive Settings in sidebar
-            with st.sidebar.expander("Google Drive Settings"):
-                st.info("Configure Google Drive folder for automatic saving")
-                
-                current_folder = st.session_state.get('drive_folder_id', "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i")
-                new_folder_id = st.text_input(
-                    "Google Drive Folder ID",
-                    value=current_folder,
-                    help="Enter the folder ID from your Google Drive URL"
-                )
-                
-                if st.button("Verify Folder Access"):
-                    if st.session_state.drive_manager.verify_folder_access(new_folder_id):
-                        st.session_state.drive_folder_id = new_folder_id
-                        st.success("✅ Folder access verified successfully!")
-                    else:
-                        st.error("❌ Cannot access this folder. Please check the ID and permissions.")
-                        st.info("Make sure the folder is shared with your Google account")
+         # Google Drive Settings in sidebar
+    with st.sidebar.expander("Google Drive Settings"):
+        st.info("Google Drive Integration Status")
+        
+        if 'drive_folder_id' in st.session_state:
+            st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
+            
+            if st.button("Test Folder Access"):
+                if st.session_state.drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
+                    st.success("✅ Folder access verified!")
+                else:
+                    st.error("❌ Could not access folder. Please check permissions.")
+                    st.info("Make sure the folder is shared with your Google account")
+        else:
+            st.warning("⚠️ Drive folder not configured")
+            st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
+            st.info("Using default folder ID")
 
             # Navigation
             page = st.sidebar.radio(
