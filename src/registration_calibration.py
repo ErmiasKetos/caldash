@@ -122,7 +122,7 @@ def render_ph_calibration():
 
     st.markdown('</div>', unsafe_allow_html=True)
 def render_ec_calibration():
-    st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
+    
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
 
     # Temperature Section
@@ -156,7 +156,7 @@ def render_ec_calibration():
 
     st.markdown('</div>', unsafe_allow_html=True)  # Closing EC Calibration container
 def render_do_calibration():
-    st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
+  
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
 
     # Temperature Section
@@ -194,7 +194,7 @@ def render_do_calibration():
 
     st.markdown('</div>', unsafe_allow_html=True)
 def render_orp_calibration():
-    st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
+    
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
 
     # Temperature Section
