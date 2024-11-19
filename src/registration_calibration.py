@@ -62,10 +62,16 @@ def registration_calibration_page():
         unsafe_allow_html=True,
     )
 
-    # Calibration Details Section
-    st.markdown('<h2 style="font-family: Arial; color: #0071ba;">Calibration Details</h2>', unsafe_allow_html=True)
+    # Calibration Details - Card
+    st.markdown(
+        """
+        <div style="border: 2px solid #0071ba; padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h2 style="font-family: Arial; color: #0071ba; text-align: center;">Calibration Details</h2>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Render Calibration Details Based on Probe Type
+    # Render Calibration Details Inside the Card
     if probe_type == "pH Probe":
         render_ph_calibration()
     elif probe_type == "DO Probe":
@@ -74,6 +80,9 @@ def registration_calibration_page():
         render_orp_calibration()
     elif probe_type == "EC Probe":
         render_ec_calibration()
+
+    # Close Calibration Details Card
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # Save Button
     if st.button("Save"):
