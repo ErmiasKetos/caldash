@@ -2,7 +2,9 @@ import streamlit as st
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from googleapiclient.errors import HttpError
 import pandas as pd
+import io
 import os
 import logging
 from datetime import datetime
@@ -15,7 +17,6 @@ INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
 BACKUP_FOLDER_ID = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
 
 class DriveManager:
-    """Manages Google Drive operations"""
     def __init__(self):
         self.service = None
         self.credentials = None
@@ -51,8 +52,28 @@ class DriveManager:
             logger.error(f"Failed to verify folder access: {str(e)}")
             return False
 
-    def save_to_drive(self, file_path, drive_folder_id):
-        """Save file to Google Drive in specified folder"""
+    def load_file_from_drive(self, file_id):
+        """Load and parse CSV file from Drive"""
+        try:
+            if not self.service:
+                logger.error("Drive service not initialized")
+                return None
+
+            # Get the file metadata and content
+            request = self.service.files().get_media(fileId=file_id)
+            file_content = request.execute()
+            
+            # Parse CSV content
+            df = pd.read_csv(io.StringIO(file_content.decode('utf-8')))
+            logger.info(f"Successfully loaded file from Drive: {file_id}")
+            return df
+
+        except Exception as e:
+            logger.error(f"Failed to load file from Drive: {str(e)}")
+            return None
+
+    def save_to_drive(self, file_path, drive_folder_id, update_existing=True):
+        """Save or update file in Google Drive"""
         try:
             if not os.path.exists(file_path):
                 logger.error(f"File not found: {file_path}")
@@ -62,16 +83,14 @@ class DriveManager:
                 logger.error("Drive service not initialized")
                 return False
 
-            # Verify folder access first
-            if not self.verify_folder_access(drive_folder_id):
-                logger.error(f"Cannot access folder: {drive_folder_id}")
-                return False
+            filename = os.path.basename(file_path)
 
-            file_metadata = {
-                'name': os.path.basename(file_path),
-                'parents': [drive_folder_id],
-                'mimeType': 'text/csv'
-            }
+            # Check if file already exists
+            existing_files = self.service.files().list(
+                q=f"name='{filename}' and '{drive_folder_id}' in parents",
+                spaces='drive',
+                fields="files(id, name)"
+            ).execute()
 
             media = MediaFileUpload(
                 file_path,
@@ -79,51 +98,31 @@ class DriveManager:
                 resumable=True
             )
 
-            file = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id, name'
-            ).execute()
+            if existing_files.get('files') and update_existing:
+                # Update existing file
+                file_id = existing_files['files'][0]['id']
+                self.service.files().update(
+                    fileId=file_id,
+                    media_body=media
+                ).execute()
+                logger.info(f"Updated existing file in Drive: {filename}")
+            else:
+                # Create new file
+                file_metadata = {
+                    'name': filename,
+                    'parents': [drive_folder_id],
+                    'mimeType': 'text/csv'
+                }
+                
+                self.service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
+                logger.info(f"Created new file in Drive: {filename}")
 
-            logger.info(f"File saved to Drive successfully: {file.get('name')} ({file.get('id')})")
             return True
 
         except Exception as e:
             logger.error(f"Failed to save to Drive: {str(e)}")
             return False
-
-def save_inventory(inventory_df, file_path, drive_manager=None):
-    """Save inventory to local file and Google Drive"""
-    try:
-        # Save locally
-        inventory_df.to_csv(file_path, index=False)
-        logger.info(f"Inventory saved locally: {file_path}")
-        
-        # Create backup with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
-        inventory_df.to_csv(backup_path, index=False)
-        logger.info(f"Backup created: {backup_path}")
-        
-        # Save to Drive if available
-        if drive_manager and drive_manager.service and 'drive_folder_id' in st.session_state:
-            folder_id = st.session_state.drive_folder_id
-            if folder_id:
-                logger.info(f"Attempting to save to Drive folder: {folder_id}")
-                if drive_manager.save_to_drive(file_path, folder_id):
-                    st.success("✅ File saved to Google Drive successfully")
-                    return True
-                else:
-                    st.error("❌ Failed to save to Google Drive")
-                    return False
-            else:
-                st.warning("⚠️ No Google Drive folder configured")
-                return False
-        else:
-            st.info("ℹ️ Google Drive integration not available")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Failed to save inventory: {str(e)}")
-        st.error(f"Failed to save inventory: {str(e)}")
-        return False
