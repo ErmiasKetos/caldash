@@ -12,7 +12,10 @@ from src.registration_calibration import registration_calibration_page
 from src.inventory_review import inventory_review_page
 
 # OAuth 2.0 configuration
-SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+SCOPES = ['openid', 'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+
+
+
 CLIENT_CONFIG = {
     "web": {
         "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
@@ -23,7 +26,6 @@ CLIENT_CONFIG = {
         "javascript_origins": ["https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app"]
     }
 }
-
 class DriveManager:
     """Manages Google Drive operations"""
     def __init__(self):
