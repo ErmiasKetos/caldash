@@ -96,7 +96,7 @@ def handle_session_error():
     """Handle session errors by clearing state and rerunning"""
     st.session_state.clear()
     st.experimental_set_query_params()
-    st.experimental_rerun()
+    st.rerun()  # Updated from experimental_rerun
 
 def check_user_auth():
     """Check and handle user authentication"""
@@ -194,7 +194,7 @@ def main():
         # Check for auth code in URL
         if 'code' in st.experimental_get_query_params():
             if init_google_auth():
-                st.experimental_rerun()
+                st.rerun()  # Updated from experimental_rerun
             return
 
         # Check if already authenticated
@@ -232,6 +232,13 @@ def main():
 
 if __name__ == "__main__":
     try:
+        # Set page config first
+        st.set_page_config(
+            page_title="Probe Management System",
+            layout="wide",
+            initial_sidebar_state="expanded"
+        )
+        
         # Initialize session state
         if 'inventory' not in st.session_state:
             if os.path.exists('inventory.csv'):
@@ -247,13 +254,6 @@ if __name__ == "__main__":
         if 'drive_manager' not in st.session_state:
             st.session_state.drive_manager = DriveManager()
             logger.info("Drive manager initialized")
-
-        # Set page config
-        st.set_page_config(
-            page_title="Probe Management System",
-            layout="wide",
-            initial_sidebar_state="expanded"
-        )
         
         main()
         
