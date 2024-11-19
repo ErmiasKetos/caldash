@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
-from src.drive_manager import DriveManager
+from .drive_manager import DriveManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
