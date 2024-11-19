@@ -113,6 +113,41 @@ def render_ph_calibration():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+def render_ec_calibration():
+    st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
+
+    # Temperature Section
+    st.markdown('<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h4 style="font-family: Arial; color: #333;">Temperature</h4>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.number_input("Initial Temperature (°C)", value=0.0, key="ec_temp_initial")
+    with col2:
+        st.number_input("Calibrated Temperature (°C)", value=0.0, key="ec_temp_calibrated")
+    st.markdown('</div>', unsafe_allow_html=True)  # Closing Temperature section
+
+    # Calibration Points
+    for idx, (label, color) in enumerate(
+        [("84 μS/cm", "#f8f1f1"), ("1413 μS/cm", "#e8f8f2"), ("12.88 mS/cm", "#e8f0f8")]
+    ):
+        st.markdown(
+            f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>', unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.text_input("Control Number", key=f"ec_{idx}_control_number")
+            st.date_input("Expiration Date", key=f"ec_{idx}_expiration")
+        with col2:
+            st.date_input("Date Opened", key=f"ec_{idx}_date_opened")
+            st.number_input("Initial Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_initial")
+            st.number_input("Calibrated Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_calibrated")
+        st.markdown('</div>', unsafe_allow_html=True)  # Closing Calibration point section
+
+    st.markdown('</div>', unsafe_allow_html=True)  # Closing EC Calibration container
+
 
 
 def render_do_calibration():
