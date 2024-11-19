@@ -55,7 +55,8 @@ def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
         drive_manager.save_to_drive(file_path, drive_folder_id)
 
 def check_user_auth():
-    if 'credentials' not in st.session_state:
+        if 'credentials' in st.session_state and st.session_state['credentials'].valid:
+        return True
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
