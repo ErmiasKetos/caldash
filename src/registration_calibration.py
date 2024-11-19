@@ -293,9 +293,9 @@ def registration_calibration_page():
 
 # Save Button
     if st.button("Save Probe"):
-    if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
-        st.error("Please fill in all required fields.")
-        return
+        if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
+            st.error("Please fill in all required fields.")
+            return
 
     try:
         with st.spinner("Saving probe data..."):
