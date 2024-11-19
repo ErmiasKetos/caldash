@@ -160,10 +160,10 @@ def main():
         )
 
         # Page routing
-        if page == "Registration & Calibration":
-            render_registration_calibration_page()
-        elif page == "Dashboard":
-            dashboard()
+        if page == "Dashboard":
+            render_dashboard()
+        elif page == "Registration & Calibration":
+            registration_calibration_page()
         elif page == "Inventory Review":
             inventory_review_page()
 
