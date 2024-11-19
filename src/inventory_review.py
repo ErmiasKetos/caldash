@@ -30,7 +30,7 @@ def inventory_review_page():
     if not filtered_inventory.empty:
         st.dataframe(
             style_inventory_dataframe(filtered_inventory),
-            height=400
+            height=400,
             use_container_width=True
         )
     else:
