@@ -4,7 +4,6 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import logging
 import os
-import sys
 from datetime import datetime
 from src.drive_manager import DriveManager
 from src.registration_calibration import registration_calibration_page
