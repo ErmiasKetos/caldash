@@ -198,13 +198,30 @@ def registration_calibration_page():
         unsafe_allow_html=True,
     )
 
-    # Debug information
-    with st.sidebar.expander("Debug Info", expanded=False):
-        st.write({
-            "Drive Connected": 'drive_manager' in st.session_state,
-            "Inventory Records": len(st.session_state.inventory),
-            "Last Save": st.session_state.get('last_save_time', 'Never')
-        })
+    # Sidebar Drive Settings
+    with st.sidebar:
+        with st.expander("Google Drive Settings"):
+            if 'drive_folder_id' in st.session_state:
+                st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
+                if st.button("Test Folder Access"):
+                    drive_manager = st.session_state.get('drive_manager')
+                    if drive_manager and drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
+                        st.success("✅ Folder access verified!")
+                        st.session_state['last_drive_check'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        st.error("❌ Could not access folder. Check permissions.")
+            else:
+                st.warning("⚠️ Drive folder not configured")
+
+        # Debug information
+        with st.expander("Debug Info"):
+            st.write({
+                "Drive Connected": 'drive_manager' in st.session_state,
+                "Drive Folder": st.session_state.get('drive_folder_id', 'Not set'),
+                "Records Count": len(st.session_state.inventory),
+                "Last Save": st.session_state.get('last_save_time', 'Never'),
+                "Last Drive Check": st.session_state.get('last_drive_check', 'Never')
+            })
 
     # Probe Information Section
     st.markdown('<h2 style="font-family: Arial; color: #333;">Probe Information</h2>', unsafe_allow_html=True)
@@ -229,7 +246,7 @@ def registration_calibration_page():
         calibration_date = st.date_input("Calibration Date", datetime.today(), key="calibration_date")
 
     # Generate Serial Number
-    service_years = SERVICE_LIFE.get(probe_type, 2)  # Default 2 years
+    service_years = SERVICE_LIFE.get(probe_type, 2)
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
     serial_number = get_next_serial_number(probe_type, manufacturing_date)
     st.text(f"Generated Serial Number: {serial_number}")
@@ -243,7 +260,7 @@ def registration_calibration_page():
         unsafe_allow_html=True,
     )
 
-    # Render appropriate calibration form based on probe type
+    # Render appropriate calibration form
     calibration_data = None
     if probe_type == "pH Probe":
         calibration_data = render_ph_calibration()
@@ -263,6 +280,13 @@ def registration_calibration_page():
             return
 
         try:
+            # Verify Drive access before saving
+            drive_status = False
+            if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+                drive_status = st.session_state.drive_manager.verify_folder_access(
+                    st.session_state['drive_folder_id']
+                )
+
             # Prepare probe data
             probe_data = {
                 "Serial Number": serial_number,
@@ -276,7 +300,7 @@ def registration_calibration_page():
                 "Last Modified": datetime.now().strftime("%Y-%m-%d"),
                 "Status Color": STATUS_COLORS["Instock"],
                 "Change Date": datetime.now().strftime("%Y-%m-%d"),
-                "Calibration Data": str(calibration_data)  # Store calibration data as string
+                "Calibration Data": str(calibration_data)
             }
 
             # Add probe to inventory
@@ -285,27 +309,13 @@ def registration_calibration_page():
             if success:
                 st.success(f"✅ New probe {serial_number} registered successfully!")
                 
-                # Save to Drive if available
-                if 'drive_manager' in st.session_state:
+                # Save to Drive if available and accessible
+                if drive_status:
                     save_success = save_inventory(st.session_state.inventory)
                     if save_success:
                         st.success("✅ Inventory saved to Google Drive")
+                        st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     else:
-                        st.warning("⚠️ Failed to save to Google Drive")
-                
-                # Clear form fields
-                st.session_state['manufacturer'] = ""
-                st.session_state['manufacturer_part_number'] = ""
-                st.session_state['ketos_part_number'] = KETOS_PART_NUMBERS[probe_type][0]
-                
-                # Rerun to refresh the page
-                st.rerun()
-            else:
-                st.error("❌ Failed to register probe")
-
-        except Exception as e:
-            logger.error(f"Error saving probe: {str(e)}")
-            st.error(f"Error saving probe: {str(e)}")
-
-if __name__ == "__main__":
-    registration_calibration_page()
+                        st.warning("⚠️ Failed to save to Google Drive, but data is saved locally")
+                else:
+                    st.warning("
