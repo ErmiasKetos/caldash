@@ -13,9 +13,6 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
-BACKUP_FOLDER_ID = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
-
 class DriveManager:
     def __init__(self):
         self.service = None
