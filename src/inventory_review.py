@@ -73,7 +73,7 @@ def inventory_review_page():
             if st.button("Confirm"):
                 if update_probe_status(selected_probe, new_status):
                     st.success(f"✅ Updated status of {selected_probe} to {new_status}")
-                        st.rerun()
+                    st.rerun()
                     else:
                         st.error("❌ Failed to update status")
                 
