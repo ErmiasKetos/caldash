@@ -156,11 +156,13 @@ def main():
         # Sidebar navigation
         page = st.sidebar.radio(
             "Navigate to",
-            ["Registration & Calibration", "Inventory Review"]
+            ["Dashboard", "Registration & Calibration", "Inventory Review"]
         )
 
         # Page routing
-        if page == "Registration & Calibration":
+        if page == "Dashboard":
+            render_dashboard()
+        elif page == "Registration & Calibration":
             registration_calibration_page()
         elif page == "Inventory Review":
             inventory_review_page()
