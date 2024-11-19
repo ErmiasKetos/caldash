@@ -18,22 +18,22 @@ service_life = {
     "EC Probe": 10,
 }
 
-# Global inventory data
-if "inventory" not in st.session_state:
-    st.session_state["inventory"] = pd.DataFrame(
-        columns=[
-            "Serial Number",
-            "Type",
-            "Manufacturer",
-            "KETOS P/N",
-            "Mfg P/N",
-            "Next Calibration",
-            "Status",
-        ]
-    )
-
 
 def registration_calibration_page():
+    # Initialize inventory in session state
+    if "inventory" not in st.session_state:
+        st.session_state["inventory"] = pd.DataFrame(
+            columns=[
+                "Serial Number",
+                "Type",
+                "Manufacturer",
+                "KETOS P/N",
+                "Mfg P/N",
+                "Next Calibration",
+                "Status",
+            ]
+        )
+
     st.title("Probe Registration & Calibration")
 
     # General Section: Probe Information
@@ -86,48 +86,52 @@ def registration_calibration_page():
 def render_ph_calibration():
     st.subheader("pH Calibration")
     for buffer_label in ["pH 4", "pH 7", "pH 10"]:
-        with st.container():
+        col1, col2 = st.columns(2)
+        with col1:
             st.markdown(f"### {buffer_label} Buffer")
-            control_number = st.text_input(f"{buffer_label} Control Number")
-            expiration_date = st.date_input(f"{buffer_label} Expiration Date")
-            date_opened = st.date_input(f"{buffer_label} Date Opened")
-            initial = st.number_input(f"{buffer_label} Initial Measurement (pH)", value=0.0)
-            calibrated = st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0)
-            mv = st.number_input(f"{buffer_label} mV", value=0.0)
+            st.text_input(f"{buffer_label} Control Number")
+            st.date_input(f"{buffer_label} Expiration Date")
+        with col2:
+            st.date_input(f"{buffer_label} Date Opened")
+            st.number_input(f"{buffer_label} Initial Measurement (pH)", value=0.0)
+            st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0)
+            st.number_input(f"{buffer_label} mV", value=0.0)
 
 
 def render_do_calibration():
     st.subheader("DO Calibration")
     col1, col2 = st.columns(2)
     with col1:
-        zero_control_number = st.text_input("0% DO Control Number")
-        zero_expiration_date = st.date_input("0% DO Expiration Date")
-        zero_initial = st.number_input("0% DO Initial Measurement (%)", value=0.0)
-        hundred_initial = st.number_input("100% DO Initial Measurement (%)", value=0.0)
+        st.text_input("0% DO Control Number")
+        st.date_input("0% DO Expiration Date")
+        st.number_input("0% DO Initial Measurement (%)", value=0.0)
+        st.number_input("100% DO Initial Measurement (%)", value=0.0)
     with col2:
-        zero_date_opened = st.date_input("0% DO Date Opened")
-        zero_calibrated = st.number_input("0% DO Calibrated Measurement (%)", value=0.0)
-        hundred_calibrated = st.number_input("100% DO Calibrated Measurement (%)", value=0.0)
+        st.date_input("0% DO Date Opened")
+        st.number_input("0% DO Calibrated Measurement (%)", value=0.0)
+        st.number_input("100% DO Calibrated Measurement (%)", value=0.0)
 
 
 def render_orp_calibration():
     st.subheader("ORP Calibration")
     col1, col2 = st.columns(2)
     with col1:
-        control_number = st.text_input("240 mV Control Number")
-        expiration_date = st.date_input("240 mV Expiration Date")
-        initial_orp = st.number_input("240 mV Initial Measurement (mV)", value=0.0)
+        st.text_input("240 mV Control Number")
+        st.date_input("240 mV Expiration Date")
+        st.number_input("240 mV Initial Measurement (mV)", value=0.0)
     with col2:
-        date_opened = st.date_input("240 mV Date Opened")
-        calibrated_orp = st.number_input("240 mV Calibrated Measurement (mV)", value=0.0)
+        st.date_input("240 mV Date Opened")
+        st.number_input("240 mV Calibrated Measurement (mV)", value=0.0)
 
 
 def render_ec_calibration():
     st.subheader("Specific Conductance (EC) Calibration")
     for label in ["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]:
-        with st.container():
+        col1, col2 = st.columns(2)
+        with col1:
             st.markdown(f"### {label} Calibration")
-            control_number = st.text_input(f"{label} Control Number")
-            expiration_date = st.date_input(f"{label} Expiration Date")
-            initial_value = st.number_input(f"{label} Initial Measurement (μS/cm or mS/cm)", value=0.0)
-            calibrated_value = st.number_input(f"{label} Calibrated Measurement (μS/cm or mS/cm)", value=0.0)
+            st.text_input(f"{label} Control Number")
+            st.date_input(f"{label} Expiration Date")
+        with col2:
+            st.number_input(f"{label} Initial Measurement (μS/cm or mS/cm)", value=0.0)
+            st.number_input(f"{label} Calibrated Measurement (μS/cm or mS/cm)", value=0.0)
