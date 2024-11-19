@@ -10,7 +10,13 @@ ketos_part_numbers = {
     "ORP Probe": ["400-00261"],
     "EC Probe": ["400-00259", "400-00279"],
 }
-
+# Expected Service Life for probes
+service_life = {
+    "pH Probe": 2,
+    "ORP Probe": 2,
+    "DO Probe": 4,
+    "EC Probe": 10,
+}
 # Function to render the registration and calibration page
 def registration_calibration_page():
     # Initialize inventory in session state
