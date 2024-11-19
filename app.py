@@ -43,10 +43,8 @@ if st.session_state["authentication_status"]:
         ["Probe Registration & Calibration", "Inventory Review"],
     )
 
-    # Navigation logic
-    if page == "Probe Registration & Calibration":
-        st.title("Probe Registration & Calibration Page")
-        st.write("This is where users register and calibrate probes.")  # Replace with actual content
-    elif page == "Inventory Review":
-        st.title("Inventory Review Page")
-        st.write("This is where users review the inventory.")  # Replace with actual content
+# App Navigation
+if page == "Probe Registration & Calibration":
+    registration_calibration_page()
+elif page == "Inventory Review":
+    inventory_review_page()
