@@ -1,59 +1,33 @@
 import streamlit as st
-from src.registration_calibration import registration_calibration_page
-from src.inventory_review import inventory_review_page
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import pandas as pd
 import threading
 import time
 import os
-from datetime import datetime, timedelta
-import jwt
+from datetime import datetime
+from src.registration_calibration import registration_calibration_page
+from src.inventory_review import inventory_review_page
 
 # OAuth 2.0 configuration
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
-CREDENTIALS_FILE = 'credentials.json'
-
-class AuthManager:
-    def __init__(self):
-        self.secret_key = os.environ.get('JWT_SECRET_KEY', 'your-secret-key')
-    
-    def verify_ketos_email(self, email):
-        return email.endswith('@ketos.co')
-    
-    def create_session_token(self, email):
-        return jwt.encode(
-            {'email': email, 'exp': datetime.utcnow() + timedelta(days=1)},
-            self.secret_key,
-            algorithm='HS256'
-        )
-    
-    def verify_session_token(self, token):
-        try:
-            payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
-            return payload['email']
-        except:
-            return None
+SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+CLIENT_CONFIG = {
+    "web": {
+        "client_id": "YOUR_CLIENT_ID",
+        "client_secret": "YOUR_CLIENT_SECRET",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+}
 
 class DriveManager:
     def __init__(self):
-        self.credentials = None
         self.service = None
     
-    def authenticate(self):
-        if os.path.exists('token.json'):
-            self.credentials = Credentials.from_authorized_user_file('token.json', SCOPES)
-        
-        if not self.credentials or not self.credentials.valid:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            self.credentials = flow.run_local_server(port=0)
-            
-            with open('token.json', 'w') as token:
-                token.write(self.credentials.to_json())
-        
-        self.service = build('drive', 'v3', credentials=self.credentials)
+    def authenticate(self, credentials):
+        self.service = build('drive', 'v3', credentials=credentials)
     
     def save_to_drive(self, file_path, drive_folder_id):
         file_metadata = {
@@ -70,21 +44,29 @@ class DriveManager:
 def periodic_save(inventory, file_path, drive_manager, drive_folder_id):
     while True:
         time.sleep(600)  # 10 minutes
-        inventory.to_csv(file_path, index=False)
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
-        inventory.to_csv(backup_path, index=False)
-        if drive_manager:
-            drive_manager.save_to_drive(file_path, drive_folder_id)
+        save_inventory(inventory, file_path, drive_manager, drive_folder_id)
+
+def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
+    inventory.to_csv(file_path, index=False)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
+    inventory.to_csv(backup_path, index=False)
+    if drive_manager and drive_manager.service:
+        drive_manager.save_to_drive(file_path, drive_folder_id)
+
+def check_user_auth():
+    if 'credentials' not in st.session_state:
+        flow = Flow.from_client_config(
+            client_config=CLIENT_CONFIG,
+            scopes=SCOPES,
+            redirect_uri="http://localhost:8501"
+        )
+        authorization_url, _ = flow.authorization_url(prompt="consent")
+        st.markdown(f"[Login with Google]({authorization_url})")
+        return False
+    return True
 
 # Initialize session state
-if 'auth_manager' not in st.session_state:
-    st.session_state.auth_manager = AuthManager()
-
-if 'drive_manager' not in st.session_state:
-    st.session_state.drive_manager = DriveManager()
-    st.session_state.drive_manager.authenticate()
-
 if 'inventory' not in st.session_state:
     if os.path.exists('inventory.csv'):
         st.session_state.inventory = pd.read_csv('inventory.csv')
@@ -94,10 +76,13 @@ if 'inventory' not in st.session_state:
             "Mfg P/N", "Next Calibration", "Status"
         ])
 
+if 'drive_manager' not in st.session_state:
+    st.session_state.drive_manager = DriveManager()
+
 if 'save_thread' not in st.session_state:
     save_thread = threading.Thread(
         target=periodic_save,
-        args=(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager, 'your_folder_id'),
+        args=(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager, '19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i'),
         daemon=True
     )
     save_thread.start()
@@ -106,54 +91,33 @@ if 'save_thread' not in st.session_state:
 # Title of the App
 st.set_page_config(page_title="Probe Management System", layout="wide")
 
-# Login page
-def login_page():
-    st.title("Login")
-    
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-    
-    if st.button("Login"):
-        if st.session_state.auth_manager.verify_ketos_email(email):
-            # In production, verify password against secure backend
-            token = st.session_state.auth_manager.create_session_token(email)
-            st.session_state.token = token
-            st.success("Login successful!")
-            st.experimental_rerun()
-        else:
-            st.error("Please use your @ketos.co email address")
-
 # Main app
 def main():
-    # Check authentication
-    if 'token' not in st.session_state:
-        login_page()
-        return
+    st.sidebar.title("CalMS")
     
-    email = st.session_state.auth_manager.verify_session_token(st.session_state.token)
-    if not email:
-        st.session_state.pop('token', None)
-        st.experimental_rerun()
+    if not check_user_auth():
         return
 
-    # Sidebar Navigation
-    st.sidebar.title("CalMS")
+    # Get user info
+    user_info_service = build('oauth2', 'v2', credentials=st.session_state.credentials)
+    user_info = user_info_service.userinfo().get().execute()
+    
+    if not user_info['email'].endswith('@ketos.co'):
+        st.error("Access denied. Please use your @ketos.co email to log in.")
+        return
+
     page = st.sidebar.radio(
         "Navigate",
         ["Probe Registration & Calibration", "Inventory Review"],
     )
 
-    st.sidebar.text(f"Logged in as: {email}")
+    st.sidebar.text(f"Logged in as: {user_info['name']}")
     if st.sidebar.button("Logout"):
-        st.session_state.pop('token', None)
+        st.session_state.pop('credentials', None)
         st.experimental_rerun()
 
-    # Shared Save Location Setting
-    if "save_location" not in st.session_state:
-        st.session_state["save_location"] = st.radio(
-            "Select where to save the inventory file:",
-            ["Local Computer", "Google Drive"],
-        )
+    # Authenticate DriveManager
+    st.session_state.drive_manager.authenticate(st.session_state.credentials)
 
     # App Navigation
     if page == "Probe Registration & Calibration":
@@ -163,3 +127,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Handle OAuth 2.0 callback
+if 'code' in st.experimental_get_query_params():
+    flow = Flow.from_client_config(
+        client_config=CLIENT_CONFIG,
+        scopes=SCOPES,
+        redirect_uri="http://localhost:8501"
+    )
+    
