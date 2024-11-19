@@ -99,7 +99,7 @@ def registration_calibration_page():
         st.session_state["inventory"] = st.session_state["inventory"].append(new_row, ignore_index=True)
         st.success("Probe Registered and Saved Successfully!")
 def render_ph_calibration():
-    st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
+    
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
 
     for idx, (buffer_label, color) in enumerate([("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
