@@ -237,22 +237,22 @@ def main():
             st.sidebar.text(f"Logged in as: {user_info['name']}")
             
          # Google Drive Settings in sidebar
-                with st.sidebar.expander("Google Drive Settings"):
-                    st.info("Google Drive Integration Status")
-                
-                    if 'drive_folder_id' in st.session_state:
-                        st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
-                    
-                        if st.button("Test Folder Access"):
-                            if st.session_state.drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
-                                st.success("✅ Folder access verified!")
-                            else:
-                                st.error("❌ Could not access folder. Please check permissions.")
-                                st.info("Make sure the folder is shared with your Google account")
-                    else:
-                        st.warning("⚠️ Drive folder not configured")
-                        st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
-                        st.info("Using default folder ID")
+    with st.sidebar.expander("Google Drive Settings"):
+        st.info("Google Drive Integration Status")
+    
+        if 'drive_folder_id' in st.session_state:
+            st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
+        
+            if st.button("Test Folder Access"):
+                if st.session_state.drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
+                    st.success("✅ Folder access verified!")
+                else:
+                    st.error("❌ Could not access folder. Please check permissions.")
+                    st.info("Make sure the folder is shared with your Google account")
+        else:
+            st.warning("⚠️ Drive folder not configured")
+            st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
+            st.info("Using default folder ID")
 
             # Navigation
             page = st.sidebar.radio(
