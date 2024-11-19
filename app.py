@@ -21,7 +21,6 @@ CLIENT_CONFIG = {
         "token_uri": "https://oauth2.googleapis.com/token",
     }
 }
-
 class DriveManager:
     def __init__(self):
         self.service = None
