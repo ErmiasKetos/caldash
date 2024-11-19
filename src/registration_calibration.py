@@ -71,7 +71,7 @@ def registration_calibration_page():
         unsafe_allow_html=True,
     )
 
-    # Render Calibration Details Based on Probe Type
+    # Render Calibration Details Inside the Big Card
     if probe_type == "pH Probe":
         render_ph_calibration()
     elif probe_type == "DO Probe":
@@ -81,7 +81,7 @@ def registration_calibration_page():
     elif probe_type == "EC Probe":
         render_ec_calibration()
 
-    # Closing Big Card
+    # Close Big Card
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Save Button
