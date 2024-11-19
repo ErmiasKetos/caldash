@@ -4,129 +4,150 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
+BACKUP_FOLDER_ID = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"  # Your Google Drive folder ID
+
 class DriveManager:
-    """Manages Google Drive operations"""
     def __init__(self):
         self.service = None
         self.credentials = None
+        self.last_backup_date = None
 
-    def authenticate(self, credentials):
-        """Set up Google Drive service with provided credentials"""
-        try:
-            self.credentials = credentials
-            self.service = build('drive', 'v3', credentials=credentials)
-            logger.info("Drive service authenticated successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Drive authentication failed: {str(e)}")
-            st.error(f"Drive authentication failed: {str(e)}")
-            return False
-
-    def verify_folder_access(self, folder_id):
-        """Verify if the folder exists and is accessible"""
+    def load_inventory_from_drive(self, folder_id):
+        """Load inventory from Google Drive"""
         try:
             if not self.service:
-                logger.error("Drive service not initialized")
-                return False
-            
-            folder = self.service.files().get(
-                fileId=folder_id,
-                fields="id, name, permissions"
+                return None
+
+            # Search for the inventory file
+            results = self.service.files().list(
+                q=f"name='{INVENTORY_FILENAME}' and '{folder_id}' in parents",
+                fields="files(id, name, modifiedTime)"
             ).execute()
-            
-            logger.info(f"Successfully verified access to folder: {folder.get('name', 'Unknown')}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to verify folder access: {str(e)}")
-            return False
+            files = results.get('files', [])
 
-    def save_to_drive(self, file_path, drive_folder_id):
-        """Save file to Google Drive in specified folder"""
-        try:
-            if not os.path.exists(file_path):
-                logger.error(f"File not found: {file_path}")
-                return False
-
-            if not self.service:
-                logger.error("Drive service not initialized")
-                return False
+            if files:
+                # Get the file ID of the most recent version
+                file_id = files[0]['id']
+                request = self.service.files().get_media(fileId=file_id)
                 
-            # Verify folder access first
-            if not self.verify_folder_access(drive_folder_id):
-                logger.error(f"Cannot access folder: {drive_folder_id}")
+                # Download and read the file
+                from io import StringIO
+                content = request.execute().decode('utf-8')
+                df = pd.read_csv(StringIO(content))
+                logger.info(f"Loaded inventory from Drive: {len(df)} records")
+                return df
+            else:
+                logger.info("No existing inventory file found in Drive")
+                return None
+
+        except Exception as e:
+            logger.error(f"Failed to load inventory from Drive: {str(e)}")
+            return None
+
+    def check_and_create_backup(self, inventory):
+        """Create backup if 5 days have passed"""
+        try:
+            current_date = datetime.now()
+            if (not self.last_backup_date or 
+                (current_date - self.last_backup_date).days >= 5):
+                
+                # Create backup filename with timestamp
+                timestamp = current_date.strftime('%Y%m%d%H%M%S')
+                backup_filename = f"inventory_{timestamp}.csv"
+                
+                # Save backup locally first
+                inventory.to_csv(backup_filename, index=False)
+                
+                # Upload to Drive
+                file_metadata = {
+                    'name': backup_filename,
+                    'parents': [BACKUP_FOLDER_ID],
+                    'mimeType': 'text/csv'
+                }
+                
+                media = MediaFileUpload(
+                    backup_filename,
+                    mimetype='text/csv',
+                    resumable=True
+                )
+                
+                self.service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
+                
+                self.last_backup_date = current_date
+                logger.info(f"Created backup: {backup_filename}")
+                
+                # Clean up local backup file
+                os.remove(backup_filename)
+                
+        except Exception as e:
+            logger.error(f"Failed to create backup: {str(e)}")
+
+    def save_to_drive(self, inventory_df, folder_id):
+        """Save/Update inventory in Google Drive"""
+        try:
+            if not self.service:
                 return False
 
-            # Create file metadata
-            file_metadata = {
-                'name': os.path.basename(file_path),
-                'parents': [drive_folder_id],
-                'mimeType': 'text/csv'
-            }
+            # Save to temporary file first
+            inventory_df.to_csv(INVENTORY_FILENAME, index=False)
             
-            # Create media
-            media = MediaFileUpload(
-                file_path, 
-                mimetype='text/csv',
-                resumable=True
-            )
-            
-            # Create the file
-            file = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id, name, webViewLink'
+            # Check if file already exists
+            results = self.service.files().list(
+                q=f"name='{INVENTORY_FILENAME}' and '{folder_id}' in parents",
+                fields="files(id)"
             ).execute()
+            files = results.get('files', [])
+
+            if files:
+                # Update existing file
+                file_id = files[0]['id']
+                media = MediaFileUpload(
+                    INVENTORY_FILENAME,
+                    mimetype='text/csv',
+                    resumable=True
+                )
+                self.service.files().update(
+                    fileId=file_id,
+                    media_body=media
+                ).execute()
+            else:
+                # Create new file
+                file_metadata = {
+                    'name': INVENTORY_FILENAME,
+                    'parents': [folder_id],
+                    'mimeType': 'text/csv'
+                }
+                media = MediaFileUpload(
+                    INVENTORY_FILENAME,
+                    mimetype='text/csv',
+                    resumable=True
+                )
+                self.service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
+
+            # Clean up temporary file
+            os.remove(INVENTORY_FILENAME)
             
-            logger.info(f"File saved to Drive successfully: {file.get('name')} ({file.get('id')})")
+            # Check if backup is needed
+            self.check_and_create_backup(inventory_df)
+            
             return True
             
         except Exception as e:
             logger.error(f"Failed to save to Drive: {str(e)}")
             return False
-
-def save_inventory(inventory, file_path, drive_manager=None):
-    """Save inventory to local file and Google Drive"""
-    try:
-        # Save locally first
-        inventory.to_csv(file_path, index=False)
-        logger.info(f"Inventory saved locally: {file_path}")
-        
-        # Create backup with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
-        inventory.to_csv(backup_path, index=False)
-        logger.info(f"Backup created: {backup_path}")
-        
-        # Save to Drive if available
-        if drive_manager and drive_manager.service:
-            folder_id = st.session_state.get('drive_folder_id')
-            if folder_id:
-                logger.info(f"Attempting to save to Drive folder: {folder_id}")
-                if drive_manager.save_to_drive(file_path, folder_id):
-                    st.success("✅ File saved to Google Drive successfully")
-                    logger.info("Successfully saved to Google Drive")
-                    return True
-                else:
-                    st.error("❌ Failed to save to Google Drive")
-                    logger.error("Failed to save to Google Drive")
-                    return False
-            else:
-                st.warning("⚠️ No Google Drive folder configured")
-                logger.warning("No Drive folder ID found")
-                return False
-        else:
-            st.info("ℹ️ Google Drive integration not available")
-            logger.info("Drive manager not available")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Failed to save inventory: {str(e)}")
-        st.error(f"Failed to save inventory: {str(e)}")
-        return False
