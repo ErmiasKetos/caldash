@@ -28,3 +28,8 @@ if menu == "Registration & Calibration":
     registration_calibration_page()
 elif menu == "Inventory Review":
     inventory_review_page()
+save_location = st.radio(
+    "Where do you want to save the inventory file?",
+    ["Local Computer", "Google Drive"],
+)
+
