@@ -96,7 +96,7 @@ def main():
     st.sidebar.title("CalMS")
     
     # Handle OAuth 2.0 callback
-        if 'code' in st.experimental_get_query_params():
+if 'code' in st.experimental_get_query_params():
     try:
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
