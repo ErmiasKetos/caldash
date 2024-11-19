@@ -197,20 +197,34 @@ def registration_calibration_page():
                 new_row_df = pd.DataFrame([new_row])
 
                 # Append the new row to the inventory
-                st.session_state.inventory = pd.concat([st.session_state.inventory, new_row_df], ignore_index=True)
+                st.session_state["inventory"] = pd.concat([st.session_state["inventory"], new_row_df], ignore_index=True)
 
-                # Save to Drive and local
+                # Save inventory with the specified file name
+                inventory_file_name = "wbpms_inventory_2024.csv"
+                save_inventory(st.session_state["inventory"], inventory_file_name, version_control=True)
+
+                st.success("New probe registered successfully!")
+        
+                                
+               # File paths
+                local_file_path = "wbpms_inventory_2024.csv"
+                drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+
+            try:
+                # Save to Google Drive and locally
                 if save_inventory(
-                    inventory=st.session_state.inventory,
-                    file_path='inventory.csv',
-                    drive_manager=st.session_state.drive_manager
+                    inventory=st.session_state["inventory"],
+                    file_path=local_file_path,
+                    drive_manager=st.session_state.get("drive_manager"),  # Ensure DriveManager is initialized
                 ):
                     st.success("✅ New probe registered and saved to Google Drive successfully!")
                 else:
-                    st.session_state.inventory.to_csv('inventory.csv', index=False)
                     st.warning("⚠️ Probe registered and saved locally, but Google Drive save failed.")
                     st.info("Please check Google Drive settings in the sidebar.")
-                    
             except Exception as e:
-                logger.error(f"Error saving probe data: {str(e)}")
-                st.error(f"❌ Error saving probe data: {str(e)}")
+                # Fallback to local save only
+                st.session_state["inventory"].to_csv(local_file_path, index=False)
+                st.warning(f"⚠️ Probe registered and saved locally, but Google Drive save failed: {str(e)}")
+                st.info("Please check Google Drive settings in the sidebar.")
+                    
+
