@@ -96,7 +96,7 @@ def main():
     
     # Handle OAuth 2.0 callback
 params = st.experimental_get_query_params()
-    if 'code' in params:
+if 'code' in params:
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
