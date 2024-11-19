@@ -118,16 +118,38 @@ def render_do_calibration():
     st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
 
+    # Temperature Section
+    st.markdown('<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h4 style="font-family: Arial; color: #333;">Temperature</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("0% DO Control Number")
-        st.date_input("0% DO Expiration Date")
-        st.number_input("0% DO Initial Measurement (%)", value=0.0)
-        st.number_input("100% DO Initial Measurement (%)", value=0.0)
+        st.number_input("Initial Temperature (°C)", value=0.0)
     with col2:
-        st.date_input("0% DO Date Opened")
-        st.number_input("0% DO Calibrated Measurement (%)", value=0.0)
-        st.number_input("100% DO Calibrated Measurement (%)", value=0.0)
+        st.number_input("Calibrated Temperature (°C)", value=0.0)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 0% DO Calibration
+    st.markdown('<div style="background-color: #e8f8f2; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h4 style="font-family: Arial; color: #333;">0% DO Calibration</h4>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("Control Number")
+        st.date_input("Expiration Date")
+    with col2:
+        st.date_input("Date Opened")
+        st.number_input("Initial DO (%)", value=0.0)
+        st.number_input("Calibrated DO (%)", value=0.0)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 100% DO Calibration
+    st.markdown('<div style="background-color: #e8f0f8; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h4 style="font-family: Arial; color: #333;">100% DO Calibration</h4>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.number_input("Initial DO (%)", value=0.0)
+    with col2:
+        st.number_input("Calibrated DO (%)", value=0.0)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -136,35 +158,13 @@ def render_orp_calibration():
     st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
 
+    # Temperature Section
+    st.markdown('<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h4 style="font-family: Arial; color: #333;">Temperature</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("240 mV Control Number")
-        st.date_input("240 mV Expiration Date")
-        st.number_input("240 mV Initial Measurement (mV)", value=0.0)
+        st.number_input("Initial Temperature (°C)", value=0.0)
     with col2:
-        st.date_input("240 mV Date Opened")
-        st.number_input("240 mV Calibrated Measurement (mV)", value=0.0)
-
+        st.number_input("Calibrated Temperature (°C)", value=0.0)
     st.markdown('</div>', unsafe_allow_html=True)
 
-
-def render_ec_calibration():
-    st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
-    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">Specific Conductance (EC) Calibration</h3>', unsafe_allow_html=True)
-
-    for label, color in [("84 μS/cm", "#f8f1f1"), ("1413 μS/cm", "#e8f8f2"), ("12.88 mS/cm", "#e8f0f8")]:
-        st.markdown(
-            f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
-            f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>',
-            unsafe_allow_html=True,
-        )
-        col1, col2 = st.columns(2)
-        with col1:
-            st.text_input(f"{label} Control Number")
-            st.date_input(f"{label} Expiration Date")
-        with col2:
-            st.number_input(f"{label} Initial Measurement (μS/cm or mS/cm)", value=0.0)
-            st.number_input(f"{label} Calibrated Measurement (μS/cm or mS/cm)", value=0.0)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
