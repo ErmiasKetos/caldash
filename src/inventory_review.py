@@ -27,49 +27,79 @@ def inventory_review_page():
     filtered_inventory = get_filtered_inventory(status_filter)
     
     # Display inventory with styling
+    if not filtered_inventory.empty:
     st.dataframe(
         style_inventory_dataframe(filtered_inventory),
         height=400
+        use_container_width=True
     )
+    else:
+    st.info("No records found for the selected filter.")
     
     # Status update section
-    st.markdown("### Update Probe Status")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        selected_probe = st.selectbox(
-            "Select Probe",
-            st.session_state.inventory['Serial Number'].tolist()
-        )
-    
-    with col2:
-        current_status = st.session_state.inventory[
-            st.session_state.inventory['Serial Number'] == selected_probe
-        ]['Status'].iloc[0]
+    if not st.session_state.inventory.empty:
+        st.markdown("### Update Probe Status")
+        col1, col2 = st.columns(2)
         
-        new_status = st.selectbox(
-            "New Status",
-            ["Instock", "Shipped", "Scraped"],
-            index=["Instock", "Shipped", "Scraped"].index(current_status)
-        )
-    
+        with col1:
+            selected_probe = st.selectbox(
+                "Select Probe",
+                st.session_state.inventory['Serial Number'].tolist()
+            )
+        
+        with col2:
+            current_status = st.session_state.inventory[
+                st.session_state.inventory['Serial Number'] == selected_probe
+            ]['Status'].iloc[0]
+            
+            new_status = st.selectbox(
+                "New Status",
+                ["Instock", "Shipped", "Scraped"],
+                index=["Instock", "Shipped", "Scraped"].index(current_status)
+            )
+            # Show color indicator for selected status
+            st.markdown(
+                        f'<div style="background-color: {STATUS_COLORS[new_status]}; '
+                        f'padding: 10px; border-radius: 5px; margin-top: 10px;">'
+                        f'Selected status color preview</div>',
+                        unsafe_allow_html=True
+                    )
+    # Update button with confirmation
     if st.button("Update Status"):
-        confirm = st.button("Confirm Status Change")
-        if confirm:
-            if update_probe_status(selected_probe, new_status):
-                st.success(f"Updated status of {selected_probe} to {new_status}")
-                st.experimental_rerun()
-            else:
-                st.error("Failed to update status")
-
+        with st.expander("Confirm Status Change", expanded=True):
+            st.write(f"Current Status: {current_status}")
+            st.write(f"New Status: {new_status}")
+            
+            if st.button("Confirm"):
+                if update_probe_status(selected_probe, new_status):
+                    st.success(f"✅ Updated status of {selected_probe} to {new_status}")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to update status")
+                
     # Download button
-    csv = filtered_inventory.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Download Inventory as CSV",
-        data=csv,
-        file_name="inventory.csv",
-        mime="text/csv",
-    )
+    st.markdown("### Download Inventory")
+    col1, col2 = st.columns(2)
+    with col1:
+        # Download filtered inventory
+        csv = filtered_inventory.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download Filtered Inventory",
+            data=csv,
+            file_name=f"inventory_filtered_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+        )
+
+    with col2:
+        # Download full inventory
+        full_csv = st.session_state.inventory.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download Full Inventory",
+            data=full_csv,
+            file_name=f"inventory_full_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+        )
+
 
     # Debug information
     with st.expander("Debug Info", expanded=False):
