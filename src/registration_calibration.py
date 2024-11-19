@@ -173,7 +173,7 @@ def registration_calibration_page():
     # Close Calibration Details Card
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Save Button
+# Save Button
     if st.button("Save"):
         if not manufacturer or not manufacturer_part_number or not ketos_part_number:
             st.error("Please fill in all required fields.")
@@ -197,26 +197,18 @@ def registration_calibration_page():
                 # Append the new row to the inventory
                 st.session_state.inventory = pd.concat([st.session_state.inventory, new_row_df], ignore_index=True)
 
-                # Get folder ID from session state
-                folder_id = st.session_state.get('drive_folder_id')
-                
-                if not folder_id:
-                    logger.warning("No Drive folder ID found in session state")
-                    st.session_state.inventory.to_csv('inventory.csv', index=False)
-                    st.success("New probe registered successfully! (Saved locally only)")
-                    st.warning("Please configure Google Drive folder in the sidebar settings.")
+                # Save to Drive and local
+                if save_inventory(
+                    inventory=st.session_state.inventory,
+                    file_path='inventory.csv',
+                    drive_manager=st.session_state.drive_manager
+                ):
+                    st.success("✅ New probe registered and saved to Google Drive successfully!")
                 else:
-                    # Save both locally and to Drive
-                    success = save_inventory(
-                        inventory=st.session_state.inventory,
-                        file_path='inventory.csv',
-                        drive_manager=st.session_state.drive_manager
-                    )
-                    if success:
-                        st.success("New probe registered and saved to Google Drive successfully!")
-                    else:
-                        st.warning("Probe registered but Google Drive save failed. Check Drive settings in sidebar.")
-                        
+                    st.session_state.inventory.to_csv('inventory.csv', index=False)
+                    st.warning("⚠️ Probe registered and saved locally, but Google Drive save failed.")
+                    st.info("Please check Google Drive settings in the sidebar.")
+                    
             except Exception as e:
                 logger.error(f"Error saving probe data: {str(e)}")
-                st.error(f"Error saving probe data: {str(e)}")
+                st.error(f"❌ Error saving probe data: {str(e)}")
