@@ -21,6 +21,7 @@ CLIENT_CONFIG = {
         "token_uri": "https://oauth2.googleapis.com/token",
     }
 }
+
 class DriveManager:
     def __init__(self):
         self.service = None
@@ -121,4 +122,23 @@ def main():
         return
 
     st.sidebar.text(f"Logged in as: {user_info['name']}")
-    if 
+    if st.sidebar.button("Logout"):
+        st.session_state.pop('credentials', None)
+        st.experimental_rerun()
+
+    # Authenticate DriveManager
+    st.session_state.drive_manager.authenticate(st.session_state['credentials'])
+
+    # App Navigation
+    page = st.sidebar.radio(
+        "Navigate",
+        ["Probe Registration & Calibration", "Inventory Review"],
+    )
+
+    if page == "Probe Registration & Calibration":
+        registration_calibration_page()
+    elif page == "Inventory Review":
+        inventory_review_page()
+
+if __name__ == "__main__":
+    main()
