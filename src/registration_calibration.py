@@ -90,7 +90,60 @@ def render_do_calibration():
             do_data[f"do_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (%)", value=0.0, key=f"do_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return do_data
+def render_orp_calibration():
+    """Render ORP probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
+    orp_data = {}
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        orp_data['control_number'] = st.text_input("Control Number", key="orp_control_number")
+        orp_data['expiration'] = st.date_input("Expiration Date", key="orp_expiration")
+    with col2:
+        orp_data['date_opened'] = st.date_input("Date Opened", key="orp_date_opened")
+        orp_data['initial'] = st.number_input("Initial Measurement (mV)", value=0.0, key="orp_initial")
+        orp_data['calibrated'] = st.number_input("Calibrated Measurement (mV)", value=0.0, key="orp_calibrated")
+    return orp_data
 
+def render_ec_calibration():
+    """Render EC probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
+    ec_data = {}
+    
+    for idx, label in enumerate(["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]):
+        st.markdown(
+            f'<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
+            f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>',
+            unsafe_allow_html=True,
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            ec_data[f"ec_{idx}_control"] = st.text_input(
+                f"{label} Control Number", 
+                key=f"ec_{idx}_control_number"
+            )
+            ec_data[f"ec_{idx}_exp"] = st.date_input(
+                f"{label} Expiration Date", 
+                key=f"ec_{idx}_expiration"
+            )
+        with col2:
+            ec_data[f"ec_{idx}_opened"] = st.date_input(
+                f"{label} Date Opened", 
+                key=f"ec_{idx}_date_opened"
+            )
+            ec_data[f"ec_{idx}_initial"] = st.number_input(
+                f"{label} Initial Measurement (μS/cm or mS/cm)", 
+                value=0.0, 
+                key=f"ec_{idx}_initial"
+            )
+            ec_data[f"ec_{idx}_calibrated"] = st.number_input(
+                f"{label} Calibrated Measurement (μS/cm or mS/cm)", 
+                value=0.0, 
+                key=f"ec_{idx}_calibrated"
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+    return ec_data
 
 def render_calibration_form(probe_type):
     """Render appropriate calibration form based on the probe type"""
