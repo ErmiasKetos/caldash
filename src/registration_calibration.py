@@ -92,8 +92,8 @@ def registration_calibration_page():
 def render_ph_calibration():
     st.markdown('<div style="border: 1px solid #0071ba; padding: 20px; border-radius: 8px;">', unsafe_allow_html=True)
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
-    
-    for buffer_label, color in [("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]:
+
+    for idx, (buffer_label, color) in enumerate([("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
         with st.container():
             st.markdown(
                 f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
@@ -102,16 +102,17 @@ def render_ph_calibration():
             )
             col1, col2 = st.columns(2)
             with col1:
-                st.text_input(f"{buffer_label} Control Number")
-                st.date_input(f"{buffer_label} Expiration Date")
+                st.text_input(f"{buffer_label} Control Number", key=f"ph_{idx}_control_number")
+                st.date_input(f"{buffer_label} Expiration Date", key=f"ph_{idx}_expiration")
             with col2:
-                st.date_input(f"{buffer_label} Date Opened")
-                st.number_input(f"{buffer_label} Initial Measurement (pH)", value=0.0)
-                st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0)
-                st.number_input(f"{buffer_label} mV", value=0.0)
+                st.date_input(f"{buffer_label} Date Opened", key=f"ph_{idx}_date_opened")
+                st.number_input(f"{buffer_label} Initial Measurement (pH)", value=0.0, key=f"ph_{idx}_initial")
+                st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0, key=f"ph_{idx}_calibrated")
+                st.number_input(f"{buffer_label} mV", value=0.0, key=f"ph_{idx}_mv")
             st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
+=========
 
 
 def render_do_calibration():
@@ -123,9 +124,9 @@ def render_do_calibration():
     st.markdown('<h4 style="font-family: Arial; color: #333;">Temperature</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.number_input("Initial Temperature (°C)", value=0.0)
+        st.number_input("Initial Temperature (°C)", value=0.0, key="do_temp_initial")
     with col2:
-        st.number_input("Calibrated Temperature (°C)", value=0.0)
+        st.number_input("Calibrated Temperature (°C)", value=0.0, key="do_temp_calibrated")
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 0% DO Calibration
@@ -133,12 +134,12 @@ def render_do_calibration():
     st.markdown('<h4 style="font-family: Arial; color: #333;">0% DO Calibration</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("Control Number")
-        st.date_input("Expiration Date")
+        st.text_input("Control Number", key="do_0_control_number")
+        st.date_input("Expiration Date", key="do_0_expiration")
     with col2:
-        st.date_input("Date Opened")
-        st.number_input("Initial DO (%)", value=0.0)
-        st.number_input("Calibrated DO (%)", value=0.0)
+        st.date_input("Date Opened", key="do_0_date_opened")
+        st.number_input("Initial DO (%)", value=0.0, key="do_0_initial")
+        st.number_input("Calibrated DO (%)", value=0.0, key="do_0_calibrated")
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 100% DO Calibration
@@ -146,12 +147,13 @@ def render_do_calibration():
     st.markdown('<h4 style="font-family: Arial; color: #333;">100% DO Calibration</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.number_input("Initial DO (%)", value=0.0)
+        st.number_input("Initial DO (%)", value=0.0, key="do_100_initial")
     with col2:
-        st.number_input("Calibrated DO (%)", value=0.0)
+        st.number_input("Calibrated DO (%)", value=0.0, key="do_100_calibrated")
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
+==========
 
 
 def render_orp_calibration():
@@ -163,8 +165,24 @@ def render_orp_calibration():
     st.markdown('<h4 style="font-family: Arial; color: #333;">Temperature</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.number_input("Initial Temperature (°C)", value=0.0)
+        st.number_input("Initial Temperature (°C)", value=0.0, key="orp_temp_initial")
     with col2:
-        st.number_input("Calibrated Temperature (°C)", value=0.0)
+        st.number_input("Calibrated Temperature (°C)", value=0.0, key="orp_temp_calibrated")
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # 240 mV Calibration
+    st.markdown('<div style="background-color: #e8f8f2; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">', unsafe_allow_html=True)
+    st.markdown('<h4 style="font-family: Arial; color: #333;">240 mV Calibration</h4>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("Control Number", key="orp_240_control_number")
+        st.date_input("Expiration Date", key="orp_240_expiration")
+    with col2:
+        st.date_input("Date Opened", key="orp_240_date_opened")
+        st.number_input("Initial Measurement (mV)", value=0.0, key="orp_240_initial")
+        st.number_input("Calibrated Measurement (mV)", value=0.0, key="orp_240_calibrated")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 
