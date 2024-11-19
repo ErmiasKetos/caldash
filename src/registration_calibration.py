@@ -223,8 +223,11 @@ def registration_calibration_page():
                     st.info("Please check Google Drive settings in the sidebar.")
             except Exception as e:
                 # Fallback to local save only
-                st.session_state["inventory"].to_csv(local_file_path, index=False)
-                st.warning(f"⚠️ Probe registered and saved locally, but Google Drive save failed: {str(e)}")
-                st.info("Please check Google Drive settings in the sidebar.")
-                    
+                try:
+                    st.session_state["inventory"].to_csv(local_file_path, index=False)
+                    st.warning(f"⚠️ Probe registered and saved locally, but Google Drive save failed: {str(e)}")
+                    st.info("Please check Google Drive settings in the sidebar.")
+                except Exception as local_error:
+                    st.error(f"❌ Failed to save locally as well: {local_error}")
+
 
