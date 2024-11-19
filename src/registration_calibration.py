@@ -291,20 +291,20 @@ def registration_calibration_page():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Save Button
-    if st.button("Save Probe"):
-        if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
-            st.error("Please fill in all required fields.")
-            return
+# Save Button
+   if st.button("Save Probe"):
+    if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
+        st.error("Please fill in all required fields.")
+        return
 
-        try:
-            with st.spinner("Saving probe data..."):
-                # Verify Drive access before saving
-                drive_status = False
-                if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
-                    drive_status = st.session_state.drive_manager.verify_folder_access(
-                        st.session_state['drive_folder_id']
-                    )
+    try:
+        with st.spinner("Saving probe data..."):
+            # Verify Drive access before saving
+            drive_status = False
+            if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+                drive_status = st.session_state.drive_manager.verify_folder_access(
+                    st.session_state['drive_folder_id']
+                )
 
             # Prepare probe data
             probe_data = {
@@ -347,10 +347,11 @@ def registration_calibration_page():
                 st.rerun()
             else:
                 st.error("❌ Failed to register probe")
-                
-except Exception as e:
-    logger.error(f"Error saving probe: {str(e)}")
-    st.error(f"Error saving probe: {str(e)}")
+
+    except Exception as e:
+        logger.error(f"Error saving probe: {str(e)}")
+        st.error(f"Error saving probe: {str(e)}")
+
 
 if __name__ == "__main__":
-    registration_calibration_page()
+registration_calibration_page()
