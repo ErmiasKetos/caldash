@@ -38,6 +38,7 @@ STATUS_COLORS = {
     'Scraped': '#FFB6C6'   # Red
 }
 
+# Function to render calibration forms
 def render_ph_calibration():
     """Render pH probe calibration form"""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
@@ -61,6 +62,36 @@ def render_ph_calibration():
     return ph_data
 
 
+def render_do_calibration():
+    """Render DO probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
+    do_data = {}
+
+    st.markdown('<h4 style="font-family: Arial; color: #0071ba;">Temperature</h4>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        do_data['temp_initial'] = st.number_input("Initial Temperature (°C)", value=0.0, key="do_temp_initial")
+    with col2:
+        do_data['temp_calibrated'] = st.number_input("Calibrated Temperature (°C)", value=0.0, key="do_temp_calibrated")
+
+    for idx, label in enumerate(["0% DO Calibration", "100% DO Calibration"]):
+        st.markdown(
+            f'<div style="background-color: #e8f8f2; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
+            f'<h4 style="font-family: Arial; color: #333;">{label}</h4>',
+            unsafe_allow_html=True,
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            do_data[f"do_{idx}_control"] = st.text_input(f"{label} Control Number", key=f"do_{idx}_control_number")
+            do_data[f"do_{idx}_exp"] = st.date_input(f"{label} Expiration Date", key=f"do_{idx}_expiration")
+        with col2:
+            do_data[f"do_{idx}_opened"] = st.date_input(f"{label} Date Opened", key=f"do_{idx}_date_opened")
+            do_data[f"do_{idx}_initial"] = st.number_input(f"{label} Initial Measurement (%)", value=0.0, key=f"do_{idx}_initial")
+            do_data[f"do_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (%)", value=0.0, key=f"do_{idx}_calibrated")
+        st.markdown('</div>', unsafe_allow_html=True)
+    return do_data
+
+
 def render_calibration_form(probe_type):
     """Render appropriate calibration form based on the probe type"""
     if probe_type == "pH Probe":
@@ -74,6 +105,26 @@ def render_calibration_form(probe_type):
     return {}
 
 
+def load_inventory_from_drive():
+    """Load the inventory CSV from Google Drive into the app's session state."""
+    try:
+        drive_manager = st.session_state.get("drive_manager")
+        folder_id = st.session_state.get("drive_folder_id")
+
+        if drive_manager and folder_id:
+            file_content = drive_manager.download_inventory_csv(folder_id)
+            inventory_df = pd.read_csv(file_content)
+            st.session_state.inventory = inventory_df
+            return True
+        else:
+            st.warning("⚠️ Google Drive is not configured. Cannot fetch the inventory.")
+            return False
+    except Exception as e:
+        logger.error(f"Error loading inventory from Google Drive: {e}")
+        st.error("❌ Failed to load inventory. Please check your Google Drive settings.")
+        return False
+
+
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
     # Initialize inventory
@@ -84,32 +135,36 @@ def registration_calibration_page():
             "Last Modified", "Status Color", "Change Date"
         ])
 
+    # Sidebar for Drive settings
+    with st.sidebar:
+        st.markdown("### Google Drive Settings")
+        if 'drive_folder_id' in st.session_state:
+            st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
+            if st.button("Test Folder Access"):
+                drive_manager = st.session_state.get('drive_manager')
+                if drive_manager and drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
+                    st.success("✅ Folder access verified!")
+                else:
+                    st.error("❌ Could not access folder. Check permissions.")
+
+            if st.button("Upload or Update Inventory"):
+                if load_inventory_from_drive():
+                    st.success("✅ Inventory updated successfully from Google Drive!")
+                else:
+                    st.error("❌ Failed to update inventory. Please check your settings.")
+        else:
+            st.warning("⚠️ Google Drive is not configured.")
+
     # Title
     st.markdown('<h1 style="font-family: Arial; color: #0071ba;">📋 Probe Registration & Calibration</h1>', unsafe_allow_html=True)
 
-    # Sidebar for Drive settings
-    with st.sidebar:
-        with st.expander("Google Drive Settings"):
-            if 'drive_folder_id' in st.session_state:
-                st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
-                if st.button("Test Folder Access"):
-                    drive_manager = st.session_state.get('drive_manager')
-                    if drive_manager and drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
-                        st.success("✅ Folder access verified!")
-                        st.session_state['last_drive_check'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    else:
-                        st.error("❌ Could not access folder. Check permissions.")
-            else:
-                st.warning("⚠️ Drive folder not configured.")
-
-        with st.expander("Debug Info"):
-            st.write({
-                "Drive Connected": 'drive_manager' in st.session_state,
-                "Drive Folder": st.session_state.get('drive_folder_id', 'Not set'),
-                "Records Count": len(st.session_state.inventory),
-                "Last Save": st.session_state.get('last_save_time', 'Never'),
-                "Last Drive Check": st.session_state.get('last_drive_check', 'Never')
-            })
+    # Automatic inventory update on login
+    if not st.session_state.get("inventory_loaded"):
+        if load_inventory_from_drive():
+            st.success("✅ Inventory loaded successfully from Google Drive!")
+            st.session_state["inventory_loaded"] = True
+        else:
+            st.warning("⚠️ Inventory could not be loaded automatically. Please use the 'Upload or Update Inventory' button.")
 
     # Input Fields
     col1, col2 = st.columns(2)
