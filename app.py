@@ -130,7 +130,8 @@ if __name__ == "__main__":
 # Handle OAuth 2.0 callback
 if 'code' in st.experimental_get_query_params():
     flow = Flow.from_client_config(
-    client_config=CLIENT_CONFIG,
-    scopes=SCOPES,
-    redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
-)
+        client_config=CLIENT_CONFIG,
+        scopes=SCOPES,
+        redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"  
+    )
+    
