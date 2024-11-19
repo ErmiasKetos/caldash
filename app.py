@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 from src.registration_calibration import registration_calibration_page
 from src.inventory_review import inventory_review_page
+
 # OAuth 2.0 configuration
 SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
 CLIENT_CONFIG = {
@@ -56,10 +57,10 @@ def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
 def check_user_auth():
     if 'credentials' not in st.session_state:
         flow = Flow.from_client_config(
-    client_config=CLIENT_CONFIG,
-    scopes=SCOPES,
-    redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
-)
+            client_config=CLIENT_CONFIG,
+            scopes=SCOPES,
+            redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+        )
         authorization_url, _ = flow.authorization_url(prompt="consent")
         st.markdown(f"[Login with Google]({authorization_url})")
         return False
@@ -94,44 +95,11 @@ st.set_page_config(page_title="Probe Management System", layout="wide")
 def main():
     st.sidebar.title("CalMS")
     
-    if not check_user_auth():
-        return
-
-    # Get user info
-    user_info_service = build('oauth2', 'v2', credentials=st.session_state.credentials)
-    user_info = user_info_service.userinfo().get().execute()
-    
-    if not user_info['email'].endswith('@ketos.co'):
-        st.error("Access denied. Please use your @ketos.co email to log in.")
-        return
-
-    page = st.sidebar.radio(
-        "Navigate",
-        ["Probe Registration & Calibration", "Inventory Review"],
-    )
-
-    st.sidebar.text(f"Logged in as: {user_info['name']}")
-    if st.sidebar.button("Logout"):
-        st.session_state.pop('credentials', None)
-        st.experimental_rerun()
-
-    # Authenticate DriveManager
-    st.session_state.drive_manager.authenticate(st.session_state.credentials)
-
-    # App Navigation
-    if page == "Probe Registration & Calibration":
-        registration_calibration_page()
-    elif page == "Inventory Review":
-        inventory_review_page()
-
-if __name__ == "__main__":
-    main()
-
-# Handle OAuth 2.0 callback
-if 'code' in st.experimental_get_query_params():
-    flow = Flow.from_client_config(
-        client_config=CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"  
-    )
-    
+    # Handle OAuth 2.0 callback
+    if 'code' in st.experimental_get_query_params():
+        flow = Flow.from_client_config(
+            client_config=CLIENT_CONFIG,
+            scopes=SCOPES,
+            redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+        )
+        
