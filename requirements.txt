@@ -7,3 +7,4 @@ PyJWT
 pydrive
 streamlit-authenticator
 python-dotenv
+plotly
