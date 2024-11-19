@@ -52,77 +52,138 @@ class DriveManager:
             logger.error(f"Failed to verify folder access: {str(e)}")
             return False
 
-    def load_file_from_drive(self, file_id):
-        """Load and parse CSV file from Drive"""
+    def get_file_id(self, folder_id, filename):
+        """Get file ID if it exists in the folder"""
+        try:
+            query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
+            results = self.service.files().list(
+                q=query,
+                fields="files(id, name)"
+            ).execute()
+            
+            files = results.get('files', [])
+            return files[0]['id'] if files else None
+        except Exception as e:
+            logger.error(f"Error getting file ID: {str(e)}")
+            return None
+
+    def load_inventory_from_drive(self, folder_id):
+        """Load inventory file from Drive"""
         try:
             if not self.service:
                 logger.error("Drive service not initialized")
                 return None
 
-            # Get the file metadata and content
+            file_id = self.get_file_id(folder_id, INVENTORY_FILENAME)
+            if not file_id:
+                logger.info("No inventory file found in Drive")
+                return None
+
             request = self.service.files().get_media(fileId=file_id)
-            file_content = request.execute()
+            content = request.execute()
             
-            # Parse CSV content
-            df = pd.read_csv(io.StringIO(file_content.decode('utf-8')))
-            logger.info(f"Successfully loaded file from Drive: {file_id}")
+            # Read CSV content
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+            logger.info(f"Successfully loaded inventory from Drive: {len(df)} records")
             return df
 
         except Exception as e:
-            logger.error(f"Failed to load file from Drive: {str(e)}")
+            logger.error(f"Failed to load inventory from Drive: {str(e)}")
             return None
 
-    def save_to_drive(self, file_path, drive_folder_id, update_existing=True):
-        """Save or update file in Google Drive"""
+    def save_to_drive(self, inventory_df, folder_id):
+        """Save inventory to Drive"""
         try:
-            if not os.path.exists(file_path):
-                logger.error(f"File not found: {file_path}")
-                return False
-
             if not self.service:
                 logger.error("Drive service not initialized")
                 return False
 
-            filename = os.path.basename(file_path)
+            # Save DataFrame to temporary file
+            temp_file = INVENTORY_FILENAME
+            inventory_df.to_csv(temp_file, index=False)
 
-            # Check if file already exists
-            existing_files = self.service.files().list(
-                q=f"name='{filename}' and '{drive_folder_id}' in parents",
-                spaces='drive',
-                fields="files(id, name)"
-            ).execute()
+            # Prepare file metadata and media
+            file_metadata = {
+                'name': INVENTORY_FILENAME,
+                'mimeType': 'text/csv'
+            }
 
             media = MediaFileUpload(
-                file_path,
+                temp_file,
                 mimetype='text/csv',
                 resumable=True
             )
 
-            if existing_files.get('files') and update_existing:
+            # Check if file exists
+            file_id = self.get_file_id(folder_id, INVENTORY_FILENAME)
+            
+            if file_id:
                 # Update existing file
-                file_id = existing_files['files'][0]['id']
+                file_metadata['parents'] = [folder_id]
                 self.service.files().update(
                     fileId=file_id,
-                    media_body=media
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
                 ).execute()
-                logger.info(f"Updated existing file in Drive: {filename}")
+                logger.info("Updated existing inventory file in Drive")
             else:
                 # Create new file
-                file_metadata = {
-                    'name': filename,
-                    'parents': [drive_folder_id],
-                    'mimeType': 'text/csv'
-                }
-                
+                file_metadata['parents'] = [folder_id]
                 self.service.files().create(
                     body=file_metadata,
                     media_body=media,
                     fields='id'
                 ).execute()
-                logger.info(f"Created new file in Drive: {filename}")
+                logger.info("Created new inventory file in Drive")
+
+            # Clean up temporary file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
             return True
 
         except Exception as e:
             logger.error(f"Failed to save to Drive: {str(e)}")
+            return False
+
+    def create_backup(self, inventory_df, folder_id):
+        """Create backup of inventory file"""
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            backup_filename = f"inventory_backup_{timestamp}.csv"
+            
+            # Save DataFrame to temporary file
+            temp_file = backup_filename
+            inventory_df.to_csv(temp_file, index=False)
+
+            # Prepare file metadata and media
+            file_metadata = {
+                'name': backup_filename,
+                'parents': [folder_id],
+                'mimeType': 'text/csv'
+            }
+
+            media = MediaFileUpload(
+                temp_file,
+                mimetype='text/csv',
+                resumable=True
+            )
+
+            # Create backup file
+            self.service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+
+            # Clean up temporary file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+
+            logger.info(f"Created backup file: {backup_filename}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to create backup: {str(e)}")
             return False
