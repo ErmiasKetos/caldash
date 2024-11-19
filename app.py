@@ -96,10 +96,25 @@ def main():
     st.sidebar.title("CalMS")
     
     # Handle OAuth 2.0 callback
-    if 'code' in st.experimental_get_query_params():
+        if 'code' in st.experimental_get_query_params():
+    try:
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
-        
+        flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
+        credentials = flow.credentials
+        st.session_state.credentials = Credentials(
+            token=credentials.token,
+            refresh_token=credentials.refresh_token,
+            token_uri=CLIENT_CONFIG['web']['token_uri'],
+            client_id=CLIENT_CONFIG['web']['client_id'],
+            client_secret=CLIENT_CONFIG['web']['client_secret']
+        )
+        # Clear 'code' from URL to avoid re-fetching token
+        st.experimental_set_query_params()
+        st.experimental_rerun()
+    except Exception as e:
+        st.error(f"Error during token exchange: {e}")
+
