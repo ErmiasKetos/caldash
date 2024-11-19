@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import os
 from datetime import datetime
 from .inventory_manager import (
     initialize_inventory,
@@ -77,15 +76,15 @@ def inventory_review_page():
         # Update button with confirmation
         if st.button("Update Status"):
             if new_status != current_status:
-                confirm = st.button("Confirm Change", key="confirm_status")
-                if confirm:
-                    with st.spinner("Updating status..."):
-                        if update_probe_status(selected_probe, new_status):
-                            st.success(f"✅ Updated status of {selected_probe} to {new_status}")
-                            # Rerun to refresh the page
-                            st.rerun()
-                        else:
-                            st.error("Failed to update status")
+                with st.spinner("Updating status..."):
+                    if update_probe_status(selected_probe, new_status):
+                        st.success(f"✅ Updated status of {selected_probe} to {new_status}")
+                        # Re-save inventory
+                        save_inventory(st.session_state.inventory)
+                        # Rerun to refresh the page
+                        st.experimental_rerun()
+                    else:
+                        st.error("Failed to update status")
             else:
                 st.warning("No status change selected")
 
