@@ -28,11 +28,11 @@ def inventory_review_page():
     
     # Display inventory with styling
     if not filtered_inventory.empty:
-    st.dataframe(
-        style_inventory_dataframe(filtered_inventory),
-        height=400
-        use_container_width=True
-    )
+        st.dataframe(
+            style_inventory_dataframe(filtered_inventory),
+            height=400
+            use_container_width=True
+        )
     else:
     st.info("No records found for the selected filter.")
     
