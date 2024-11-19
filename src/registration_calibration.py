@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from src.inventory_review import save_inventory, get_file_path
 
 # Autofill options for KETOS Part Number
@@ -10,37 +10,23 @@ ketos_part_numbers = {
     "ORP Probe": ["400-00261"],
     "EC Probe": ["400-00259", "400-00279"],
 }
-# Expected Service Life for probes
+
+# Service life in years for each probe type
 service_life = {
     "pH Probe": 2,
-    "ORP Probe": 2,
-    "DO Probe": 4,
-    "EC Probe": 10,
+    "DO Probe": 2,
+    "ORP Probe": 4,
+    "EC Probe": 10,  # Example: EC probes have a service life of 2 years
 }
+
 # Function to render the registration and calibration page
 def registration_calibration_page():
-    # Initialize inventory in session state
     if "inventory" not in st.session_state:
         st.session_state["inventory"] = pd.DataFrame(
-            columns=[
-                "Serial Number",
-                "Type",
-                "Manufacturer",
-                "KETOS P/N",
-                "Mfg P/N",
-                "Next Calibration",
-                "Status",
-            ]
+            columns=["Serial Number", "Type", "Manufacturer", "KETOS P/N", "Mfg P/N", "Next Calibration", "Status"]
         )
 
-    # Title
-    st.markdown(
-        f'<h1 style="font-family: Arial, sans-serif; font-size: 32px; color: #0071ba;">📋 Probe Registration & Calibration</h1>',
-        unsafe_allow_html=True,
-    )
-
-    # General Section: Probe Information
-    st.markdown('<h2 style="font-family: Arial; color: #333;">Probe Information</h2>', unsafe_allow_html=True)
+    st.title("Probe Registration & Calibration")
     col1, col2 = st.columns(2)
     with col1:
         manufacturer = st.text_input("Manufacturer")
@@ -48,45 +34,19 @@ def registration_calibration_page():
         manufacturer_part_number = st.text_input("Manufacturer Part Number")
     with col2:
         probe_type = st.selectbox("Probe Type", ["pH Probe", "DO Probe", "ORP Probe", "EC Probe"])
-        ketos_part_number = st.selectbox(
-            "KETOS Part Number",
-            ketos_part_numbers.get(probe_type, []),
-        )
+        ketos_part_number = st.selectbox("KETOS Part Number", ketos_part_numbers.get(probe_type, []))
         calibration_date = st.date_input("Calibration Date", datetime.today())
 
     # Serial Number Generation
-       # Serial Number Generation
     service_years = service_life.get(probe_type, 1)
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
     expire_yymm = expire_date.strftime("%y%m")
     serial_number = f"{probe_type.split()[0]}_{expire_yymm}_{len(st.session_state['inventory']) + 1:05d}"
     st.text(f"Generated Serial Number: {serial_number}")
 
-    # Calibration Details Section
-    st.markdown(
-        """
-        <div style="border: 2px solid #0071ba; padding: 20px; border-radius: 12px; margin-top: 20px;">
-            <h2 style="font-family: Arial; color: #0071ba; text-align: center;">Calibration Details</h2>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Render Calibration Details Based on Probe Type
-    if probe_type == "pH Probe":
-        render_ph_calibration()
-    elif probe_type == "DO Probe":
-        render_do_calibration()
-    elif probe_type == "ORP Probe":
-        render_orp_calibration()
-    elif probe_type == "EC Probe":
-        render_ec_calibration()
-
-    # Close Calibration Details Card
-    st.markdown('</div>', unsafe_allow_html=True)
-
     # Save Button
     if st.button("Save"):
-        next_calibration = calibration_date + timedelta(days=365)  # Default 1 year
+        next_calibration = calibration_date + timedelta(days=service_years * 365)
         new_row = {
             "Serial Number": serial_number,
             "Type": probe_type,
@@ -96,13 +56,10 @@ def registration_calibration_page():
             "Next Calibration": next_calibration.strftime("%Y-%m-%d"),
             "Status": "Active",
         }
-        # Create a single-row DataFrame for the new entry
-        new_row_df = pd.DataFrame([new_row])
-
-        # Append the new row to the inventory
-        st.session_state["inventory"] = pd.concat([st.session_state["inventory"], new_row_df], ignore_index=True)
+        st.session_state["inventory"] = pd.concat([st.session_state["inventory"], pd.DataFrame([new_row])], ignore_index=True)
         save_inventory(st.session_state["inventory"], get_file_path(), version_control=True)
-        st.success("New probe registered successfully!")
+        st.success("Probe registered successfully!")
+
 
 # pH Calibration Rendering
 def render_ph_calibration():
