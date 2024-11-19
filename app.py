@@ -12,7 +12,11 @@ from src.registration_calibration import registration_calibration_page
 from src.inventory_review import inventory_review_page
 
 # OAuth 2.0 configuration
-SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
 CLIENT_CONFIG = {
     "web": {
         "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
@@ -22,30 +26,26 @@ CLIENT_CONFIG = {
     }
 }
 
+# DriveManager class for Google Drive operations
 class DriveManager:
     def __init__(self):
         self.service = None
-    
+
     def authenticate(self, credentials):
         self.service = build('drive', 'v3', credentials=credentials)
-    
-    def save_to_drive(self, file_path, drive_folder_id):
-        file_metadata = {
-            'name': os.path.basename(file_path),
-            'parents': [drive_folder_id]
-        }
-        media = MediaFileUpload(file_path, mimetype='text/csv')
-        self.service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
 
+    def save_to_drive(self, file_path, drive_folder_id):
+        file_metadata = {'name': os.path.basename(file_path), 'parents': [drive_folder_id]}
+        media = MediaFileUpload(file_path, mimetype='text/csv')
+        self.service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+# Periodic save function
 def periodic_save(inventory, file_path, drive_manager, drive_folder_id):
     while True:
-        time.sleep(600)  # 10 minutes
+        time.sleep(600)  # Every 10 minutes
         save_inventory(inventory, file_path, drive_manager, drive_folder_id)
 
+# Save inventory to CSV and optionally to Google Drive
 def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
     inventory.to_csv(file_path, index=False)
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -54,6 +54,7 @@ def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
     if drive_manager and drive_manager.service:
         drive_manager.save_to_drive(file_path, drive_folder_id)
 
+# Check if user is authenticated
 def check_user_auth():
     if 'credentials' not in st.session_state:
         flow = Flow.from_client_config(
@@ -95,11 +96,50 @@ st.set_page_config(page_title="Probe Management System", layout="wide")
 def main():
     st.sidebar.title("CalMS")
     
+    # Check user authentication
+    if not check_user_auth():
+        return
+
+    # Get user info
+    user_info_service = build('oauth2', 'v2', credentials=st.session_state.credentials)
+    user_info = user_info_service.userinfo().get().execute()
+    
+    # Restrict access to @ketos.co emails
+    if not user_info['email'].endswith('@ketos.co'):
+        st.error("Access denied. Please use your @ketos.co email to log in.")
+        return
+
+    # Sidebar navigation
+    page = st.sidebar.radio(
+        "Navigate",
+        ["Probe Registration & Calibration", "Inventory Review"],
+    )
+
+    st.sidebar.text(f"Logged in as: {user_info['name']}")
+    if st.sidebar.button("Logout"):
+        st.session_state.pop('credentials', None)
+        st.experimental_rerun()
+
+    # Authenticate DriveManager
+    st.session_state.drive_manager.authenticate(st.session_state.credentials)
+
+    # App Navigation
+    if page == "Probe Registration & Calibration":
+        registration_calibration_page()
+    elif page == "Inventory Review":
+        inventory_review_page()
+
+if __name__ == "__main__":
     # Handle OAuth 2.0 callback
-    if 'code' in st.experimental_get_query_params():
+    query_params = st.experimental_get_query_params()
+    if 'code' in query_params:
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
-        
+        flow.fetch_token(code=query_params['code'][0])
+        st.session_state.credentials = Credentials.from_authorized_user_info(flow.credentials)
+        st.experimental_rerun()
+    else:
+        main()
