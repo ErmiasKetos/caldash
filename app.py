@@ -63,7 +63,6 @@ def check_user_auth():
         )
         authorization_url, _ = flow.authorization_url(prompt="consent")
         st.markdown(f"[Login with Google]({authorization_url})")
-        return False
     return True
 
 # Initialize session state
