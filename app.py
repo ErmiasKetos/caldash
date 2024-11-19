@@ -101,4 +101,3 @@ def app():
     # Display Inventory Table
     st.write("Current Inventory:")
     st.dataframe(st.session_state["inventory"])
-
