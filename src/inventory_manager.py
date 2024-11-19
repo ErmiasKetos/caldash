@@ -26,8 +26,8 @@ def initialize_inventory():
     try:
         if 'inventory' not in st.session_state or st.session_state.inventory.empty:
             if 'drive_manager' in st.session_state:
-                # Try to load from Drive
                 try:
+                    # Try to load from Drive first
                     file_list = st.session_state.drive_manager.service.files().list(
                         q=f"name='{INVENTORY_FILENAME}' and '{BACKUP_FOLDER_ID}' in parents",
                         spaces='drive'
@@ -37,6 +37,9 @@ def initialize_inventory():
                         file_id = file_list['files'][0]['id']
                         df = st.session_state.drive_manager.load_file_from_drive(file_id)
                         if df is not None:
+                            # Remove Status Color column if it exists
+                            if 'Status Color' in df.columns:
+                                df = df.drop('Status Color', axis=1)
                             st.session_state.inventory = df
                             logger.info(f"Loaded inventory from Drive: {len(df)} records")
                             return
@@ -47,7 +50,7 @@ def initialize_inventory():
             st.session_state.inventory = pd.DataFrame(columns=[
                 "Serial Number", "Type", "Manufacturer", "KETOS P/N",
                 "Mfg P/N", "Next Calibration", "Status", "Entry Date",
-                "Last Modified", "Status Color", "Change Date"
+                "Last Modified", "Change Date"
             ])
             logger.info("Created new inventory")
     except Exception as e:
@@ -65,11 +68,13 @@ def get_filtered_inventory(status_filter="All"):
         return pd.DataFrame()
 
 def style_inventory_dataframe(df):
-    """Apply color styling to inventory dataframe"""
+    """Apply color styling to inventory dataframe based on status"""
     try:
-        def color_rows(row):
-            return ['background-color: {}'.format(row['Status Color']) for _ in row]
-        return df.style.apply(color_rows, axis=1)
+        def color_status(val):
+            return f'background-color: {STATUS_COLORS.get(val, "white")}'
+        
+        # Only color the Status column
+        return df.style.applymap(color_status, subset=['Status'])
     except Exception as e:
         logger.error(f"Error styling dataframe: {str(e)}")
         return df
@@ -77,13 +82,19 @@ def style_inventory_dataframe(df):
 def save_inventory(inventory_df, version_control=True):
     """Save inventory with versioning"""
     try:
-        # Save main file
+        # Remove Status Color column if it exists
+        if 'Status Color' in inventory_df.columns:
+            inventory_df = inventory_df.drop('Status Color', axis=1)
+        
+        # Save or update main file
         inventory_df.to_csv(INVENTORY_FILENAME, index=False)
+        logger.info(f"Updated main inventory file: {INVENTORY_FILENAME}")
         
         # Version control backup every 5 days
         if version_control and datetime.now().day % 5 == 0:
             backup_filename = f"inventory_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
             inventory_df.to_csv(backup_filename, index=False)
+            logger.info(f"Created version control backup: {backup_filename}")
             
             # Save backup to Drive if available
             if 'drive_manager' in st.session_state:
@@ -110,7 +121,6 @@ def update_probe_status(serial_number, new_status):
         if serial_number in st.session_state.inventory['Serial Number'].values:
             mask = st.session_state.inventory['Serial Number'] == serial_number
             st.session_state.inventory.loc[mask, 'Status'] = new_status
-            st.session_state.inventory.loc[mask, 'Status Color'] = STATUS_COLORS[new_status]
             st.session_state.inventory.loc[mask, 'Change Date'] = datetime.now().strftime('%Y-%m-%d')
             st.session_state.inventory.loc[mask, 'Last Modified'] = datetime.now().strftime('%Y-%m-%d')
             
@@ -148,12 +158,15 @@ def get_next_serial_number(probe_type, manufacturing_date):
 def add_new_probe(probe_data):
     """Add a new probe to the inventory"""
     try:
+        # Remove Status Color if it exists
+        if 'Status Color' in probe_data:
+            del probe_data['Status Color']
+        
         # Add metadata
         probe_data['Entry Date'] = datetime.now().strftime('%Y-%m-%d')
         probe_data['Last Modified'] = datetime.now().strftime('%Y-%m-%d')
         probe_data['Change Date'] = datetime.now().strftime('%Y-%m-%d')
         probe_data['Status'] = 'Instock'
-        probe_data['Status Color'] = STATUS_COLORS['Instock']
         
         # Create new row
         new_row_df = pd.DataFrame([probe_data])
@@ -175,9 +188,18 @@ def start_periodic_save():
     def periodic_save_task():
         while True:
             time.sleep(600)  # 10 minutes
-            if 'inventory' in st.session_state:
-                save_inventory(st.session_state.inventory)
+            try:
+                if 'inventory' in st.session_state:
+                    logger.info("Performing periodic save...")
+                    save_inventory(st.session_state.inventory)
+                    logger.info("Periodic save completed")
+            except Exception as e:
+                logger.error(f"Error in periodic save: {str(e)}")
     
     import threading
     save_thread = threading.Thread(target=periodic_save_task, daemon=True)
     save_thread.start()
+    logger.info("Started periodic save thread")
+
+# Start the periodic save thread when the module is imported
+start_periodic_save()
