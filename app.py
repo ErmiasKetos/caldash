@@ -214,8 +214,7 @@ def main():
         
         # Check for auth code in URL
         if 'code' in st.experimental_get_query_params():
-            if init_google_auth():
-                st.rerun()
+           with st.spinner('Authenticating...'):
             return
 
         # Check if already authenticated
