@@ -38,6 +38,7 @@ STATUS_COLORS = {
     'Scraped': '#FFB6C6'   # Red
 }
 
+
 def render_ph_calibration():
     """Render pH probe calibration form"""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
@@ -59,6 +60,7 @@ def render_ph_calibration():
             ph_data[f"{buffer_label}_calibrated"] = st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0, key=f"ph_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return ph_data
+
 
 def render_do_calibration():
     """Render DO probe calibration form"""
@@ -89,14 +91,57 @@ def render_do_calibration():
         st.markdown('</div>', unsafe_allow_html=True)
     return do_data
 
+
+def render_orp_calibration():
+    """Render ORP probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
+    orp_data = {}
+    col1, col2 = st.columns(2)
+    with col1:
+        orp_data['control_number'] = st.text_input("Control Number", key="orp_control_number")
+        orp_data['expiration'] = st.date_input("Expiration Date", key="orp_expiration")
+    with col2:
+        orp_data['date_opened'] = st.date_input("Date Opened", key="orp_date_opened")
+        orp_data['initial'] = st.number_input("Initial Measurement (mV)", value=0.0, key="orp_initial")
+        orp_data['calibrated'] = st.number_input("Calibrated Measurement (mV)", value=0.0, key="orp_calibrated")
+    return orp_data
+
+
+def render_ec_calibration():
+    """Render EC probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
+    ec_data = {}
+
+    for idx, label in enumerate(["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]):
+        st.markdown(
+            f'<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
+            f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>',
+            unsafe_allow_html=True,
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            ec_data[f"ec_{idx}_control"] = st.text_input(f"{label} Control Number", key=f"ec_{idx}_control_number")
+            ec_data[f"ec_{idx}_exp"] = st.date_input(f"{label} Expiration Date", key=f"ec_{idx}_expiration")
+        with col2:
+            ec_data[f"ec_{idx}_opened"] = st.date_input(f"{label} Date Opened", key=f"ec_{idx}_date_opened")
+            ec_data[f"ec_{idx}_initial"] = st.number_input(f"{label} Initial Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_initial")
+            ec_data[f"ec_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_calibrated")
+        st.markdown('</div>', unsafe_allow_html=True)
+    return ec_data
+
+
 def render_calibration_form(probe_type):
     """Render appropriate calibration form based on the probe type"""
     if probe_type == "pH Probe":
         return render_ph_calibration()
     elif probe_type == "DO Probe":
         return render_do_calibration()
-    # Add other calibration forms as needed
+    elif probe_type == "ORP Probe":
+        return render_orp_calibration()
+    elif probe_type == "EC Probe":
+        return render_ec_calibration()
     return {}
+
 
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
@@ -108,9 +153,10 @@ def registration_calibration_page():
             "Last Modified", "Status Color", "Change Date"
         ])
 
-    # Form for Probe Registration
+    # Title
     st.markdown('<h1 style="font-family: Arial; color: #0071ba;">📋 Probe Registration & Calibration</h1>', unsafe_allow_html=True)
 
+    # Input Fields
     col1, col2 = st.columns(2)
     with col1:
         manufacturer = st.text_input("Manufacturer")
@@ -127,15 +173,16 @@ def registration_calibration_page():
     serial_number = get_next_serial_number(probe_type, manufacturing_date)
     st.text(f"Generated Serial Number: {serial_number}")
 
-    # Calibration Details
+    # Render Calibration Form
     calibration_data = render_calibration_form(probe_type)
 
+    # Save Button
     if st.button("Save Probe"):
         if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
             st.error("Please fill in all required fields.")
             return
 
-        # Save probe data
+        # Prepare and save probe data
         probe_data = {
             "Serial Number": serial_number,
             "Type": probe_type,
