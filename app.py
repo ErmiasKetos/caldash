@@ -5,7 +5,7 @@ import streamlit_authenticator as stauth
 
 # Authentication Setup
 users = {
-    "user1@ketos.co": {"name": "User One", "password": "hashed_password1"},
+    "ermias@ketos.co": {"name": "User One", "password": "hashed_password1"},
     "user2@ketos.co": {"name": "User Two", "password": "hashed_password2"},
 }
 
