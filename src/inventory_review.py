@@ -1,63 +1,14 @@
 import streamlit as st
 import pandas as pd
 import os
-import time
 from datetime import datetime
-from threading import Thread
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 from .inventory_manager import (
     initialize_inventory,
     get_filtered_inventory,
     style_inventory_dataframe,
-    update_probe_status
+    update_probe_status,
+    save_inventory
 )
-
-# Google Drive Authentication
-def authenticate_google_drive():
-    gauth = GoogleAuth()
-    gauth.LoadCredentialsFile("credentials.json")
-    if gauth.credentials is None:
-        gauth.LocalWebserverAuth()
-        gauth.SaveCredentialsFile("credentials.json")
-    else:
-        gauth.Authorize()
-    return GoogleDrive(gauth)
-
-# Function to save inventory to Google Drive
-def save_to_google_drive(file_path, folder_id):
-    drive = authenticate_google_drive()
-    file = drive.CreateFile({"parents": [{"id": folder_id}]})
-    file.SetContentFile(file_path)
-    file.Upload()
-
-# Function to load inventory file
-def load_inventory(file_path):
-    if os.path.exists(file_path):
-        return pd.read_csv(file_path)
-    else:
-        return pd.DataFrame(columns=["Serial Number", "Type", "Manufacturer", "KETOS P/N", "Mfg P/N", "Next Calibration", "Status"])
-
-# Function to save inventory file locally
-def save_inventory(inventory, file_path, version_control=False):
-    inventory.to_csv(file_path, index=False)
-    if version_control:
-        backup_path = file_path.replace(".csv", f"_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
-        inventory.to_csv(backup_path, index=False)
-
-# Periodic save thread function
-def periodic_save():
-    while True:
-        time.sleep(600)  # Every 10 minutes
-        file_path = get_file_path()
-        save_inventory(st.session_state["inventory"], file_path, version_control=True)
-
-# Helper function to determine save location
-def get_file_path():
-    if st.session_state["save_location"] == "Local Computer":
-        return "wbpms_inventory_2024.csv"
-    elif st.session_state["save_location"] == "Google Drive":
-        return "wbpms_inventory_2024.csv"
 
 def inventory_review_page():
     """Display and manage inventory"""
@@ -66,23 +17,18 @@ def inventory_review_page():
     # Initialize inventory if needed
     initialize_inventory()
     
-    # Add status filter
+    # Status filter
     status_filter = st.selectbox(
         "Filter by Status",
         ["All", "Instock", "Shipped", "Scraped"]
     )
     
-    # Filter inventory based on selection
-    filtered_inventory = st.session_state.inventory
-    if status_filter != "All":
-        filtered_inventory = filtered_inventory[filtered_inventory['Status'] == status_filter]
+    # Get filtered inventory
+    filtered_inventory = get_filtered_inventory(status_filter)
     
-    # Display inventory with status colors
-    def color_rows(row):
-        return [f"background-color: {row['Status Color']}"] * len(row)
-    
+    # Display inventory with styling
     st.dataframe(
-        filtered_inventory.style.apply(color_rows, axis=1),
+        style_inventory_dataframe(filtered_inventory),
         height=400
     )
     
@@ -97,16 +43,22 @@ def inventory_review_page():
         )
     
     with col2:
+        current_status = st.session_state.inventory[
+            st.session_state.inventory['Serial Number'] == selected_probe
+        ]['Status'].iloc[0]
+        
         new_status = st.selectbox(
             "New Status",
             ["Instock", "Shipped", "Scraped"],
-            index=0
+            index=["Instock", "Shipped", "Scraped"].index(current_status)
         )
     
     if st.button("Update Status"):
-        if st.button("Confirm Status Change"):
+        confirm = st.button("Confirm Status Change")
+        if confirm:
             if update_probe_status(selected_probe, new_status):
                 st.success(f"Updated status of {selected_probe} to {new_status}")
+                st.experimental_rerun()
             else:
                 st.error("Failed to update status")
 
@@ -118,3 +70,12 @@ def inventory_review_page():
         file_name="inventory.csv",
         mime="text/csv",
     )
+
+    # Debug information
+    with st.expander("Debug Info", expanded=False):
+        st.write({
+            "Total Records": len(st.session_state.inventory),
+            "Filtered Records": len(filtered_inventory),
+            "Last Save": st.session_state.get('last_save_time', 'Never'),
+            "Drive Status": 'drive_manager' in st.session_state
+        })
