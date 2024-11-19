@@ -19,122 +19,115 @@ CLIENT_CONFIG = {
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
+        "redirect_uris": ["https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"],
+        "javascript_origins": ["https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app"]
     }
 }
 
-class DriveManager:
-    def __init__(self):
-        self.service = None
-    
-    def authenticate(self, credentials):
-        self.service = build('drive', 'v3', credentials=credentials)
-    
-    def save_to_drive(self, file_path, drive_folder_id):
-        file_metadata = {
-            'name': os.path.basename(file_path),
-            'parents': [drive_folder_id]
-        }
-        media = MediaFileUpload(file_path, mimetype='text/csv')
-        self.service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
-
 def check_user_auth():
     if 'credentials' not in st.session_state:
-        flow = Flow.from_client_config(
-            client_config=CLIENT_CONFIG,
-            scopes=SCOPES,
-            redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
-        )
-        authorization_url, _ = flow.authorization_url(prompt="consent")
-        st.markdown(f"[Login with Google]({authorization_url})")
-        return False
+        try:
+            flow = Flow.from_client_config(
+                client_config=CLIENT_CONFIG,
+                scopes=SCOPES,
+                redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+            )
+            authorization_url, state = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true',
+                prompt='consent'
+            )
+            # Store the state in session for verification
+            st.session_state['oauth_state'] = state
+            st.markdown(f"[Login with Google]({authorization_url})")
+            return False
+        except Exception as e:
+            st.error(f"Auth setup error: {str(e)}")
+            return False
     return True
 
-def periodic_save(inventory, file_path, drive_manager, drive_folder_id):
-    while True:
-        time.sleep(600)  # 10 minutes
-        save_inventory(inventory, file_path, drive_manager, drive_folder_id)
-
-def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
-    inventory.to_csv(file_path, index=False)
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
-    inventory.to_csv(backup_path, index=False)
-    if drive_manager and drive_manager.service:
-        drive_manager.save_to_drive(file_path, drive_folder_id)
-
-# Initialize session state
-if 'inventory' not in st.session_state:
-    if os.path.exists('inventory.csv'):
-        st.session_state.inventory = pd.read_csv('inventory.csv')
-    else:
-        st.session_state.inventory = pd.DataFrame(columns=[
-            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
-            "Mfg P/N", "Next Calibration", "Status"
-        ])
-
-if 'drive_manager' not in st.session_state:
-    st.session_state.drive_manager = DriveManager()
-
-if 'save_thread' not in st.session_state:
-    save_thread = threading.Thread(
-        target=periodic_save,
-        args=(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager, '19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i'),
-        daemon=True
-    )
-    save_thread.start()
-    st.session_state.save_thread = save_thread
-
-# Set page config
-st.set_page_config(page_title="Probe Management System", layout="wide")
+def init_google_auth():
+    params = st.experimental_get_query_params()
+    if 'code' in params:
+        try:
+            flow = Flow.from_client_config(
+                client_config=CLIENT_CONFIG,
+                scopes=SCOPES,
+                state=st.session_state.get('oauth_state'),
+                redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+            )
+            flow.fetch_token(code=params['code'][0])
+            st.session_state['credentials'] = flow.credentials
+            # Clear the URL parameters
+            st.experimental_set_query_params()
+            return True
+        except Exception as e:
+            st.error(f"Authentication failed: {str(e)}")
+            if 'credentials' in st.session_state:
+                del st.session_state['credentials']
+            return False
+    return False
 
 def main():
     st.sidebar.title("CalMS")
     
-    # Handle OAuth 2.0 callback
+    # Check for auth code in URL
     if 'code' in st.experimental_get_query_params():
-        flow = Flow.from_client_config(
-            client_config=CLIENT_CONFIG,
-            scopes=SCOPES,
-            redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
-        )
-        flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
-        st.session_state['credentials'] = flow.credentials
-        # Clear query parameters after successful auth
-        st.experimental_set_query_params()
-        st.experimental_rerun()
+        if init_google_auth():
+            st.experimental_rerun()
+        return
 
+    # Check if already authenticated
     if not check_user_auth():
         st.write("Please log in to access the application.")
         return
 
-    # Get user info
-    user_info_service = build('oauth2', 'v2', credentials=st.session_state['credentials'])
-    user_info = user_info_service.userinfo().get().execute()
-    
-    if not user_info['email'].endswith('@ketos.co'):
-        st.error("Access denied. Please use your @ketos.co email to log in.")
-        if st.button("Logout"):
-            st.session_state.clear()
-            st.experimental_set_query_params()
-            st.experimental_rerun()
-        return
+    try:
+        # Get user info
+        user_info_service = build('oauth2', 'v2', credentials=st.session_state['credentials'])
+        user_info = user_info_service.userinfo().get().execute()
+        
+        if not user_info['email'].endswith('@ketos.co'):
+            st.error("Access denied. Please use your @ketos.co email to log in.")
+            if st.button("Logout"):
+                st.session_state.clear()
+                st.experimental_set_query_params()
+                st.experimental_rerun()
+            return
 
-    st.sidebar.text(f"Logged in as: {user_info['name']}")
-    
-    # Navigation
-    page = st.sidebar.radio(
-        "Navigate to",
-        ["Registration & Calibration", "Inventory Review"]
-    )
-    
-    if page == "Registration & Calibration":
-        registration_calibration_page()
-    elif page == "Inventory Review":
-        inventory_review_page()
+        st.sidebar.text(f"Logged in as: {user_info['name']}")
+        
+        # Navigation
+        page = st.sidebar.radio(
+            "Navigate to",
+            ["Registration & Calibration", "Inventory Review"]
+        )
+        
+        if page == "Registration & Calibration":
+            registration_calibration_page()
+        elif page == "Inventory Review":
+            inventory_review_page()
+            
+    except Exception as e:
+        st.error(f"Session error: {str(e)}")
+        st.session_state.clear()
+        st.experimental_rerun()
 
 if __name__ == "__main__":
+    # Initialize session state
+    if 'inventory' not in st.session_state:
+        if os.path.exists('inventory.csv'):
+            st.session_state.inventory = pd.read_csv('inventory.csv')
+        else:
+            st.session_state.inventory = pd.DataFrame(columns=[
+                "Serial Number", "Type", "Manufacturer", "KETOS P/N",
+                "Mfg P/N", "Next Calibration", "Status"
+            ])
+
+    if 'drive_manager' not in st.session_state:
+        st.session_state.drive_manager = DriveManager()
+
+    # Set page config
+    st.set_page_config(page_title="Probe Management System", layout="wide")
+    
     main()
