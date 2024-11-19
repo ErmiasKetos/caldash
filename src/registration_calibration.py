@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
-import time  # Importing time to fix the error
-
+import time  # Added for delay functionality
 from .drive_manager import DriveManager
 from .inventory_manager import (
     add_new_probe,
@@ -39,11 +38,11 @@ STATUS_COLORS = {
     'Scraped': '#FFB6C6'   # Red
 }
 
-
 def render_ph_calibration():
     """Render pH probe calibration form"""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
     ph_data = {}
+
     for idx, (buffer_label, color) in enumerate([("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
         st.markdown(
             f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
@@ -52,30 +51,20 @@ def render_ph_calibration():
         )
         col1, col2 = st.columns(2)
         with col1:
-            ph_data[f"{buffer_label}_control"] = st.text_input(
-                f"{buffer_label} Control Number", key=f"ph_{idx}_control_number"
-            )
-            ph_data[f"{buffer_label}_exp"] = st.date_input(
-                f"{buffer_label} Expiration Date", key=f"ph_{idx}_expiration"
-            )
+            ph_data[f"{buffer_label}_control"] = st.text_input(f"{buffer_label} Control Number", key=f"ph_{idx}_control_number")
+            ph_data[f"{buffer_label}_exp"] = st.date_input(f"{buffer_label} Expiration Date", key=f"ph_{idx}_expiration")
         with col2:
-            ph_data[f"{buffer_label}_opened"] = st.date_input(
-                f"{buffer_label} Date Opened", key=f"ph_{idx}_date_opened"
-            )
-            ph_data[f"{buffer_label}_initial"] = st.number_input(
-                f"{buffer_label} Initial Measurement (pH)", value=0.0, key=f"ph_{idx}_initial"
-            )
-            ph_data[f"{buffer_label}_calibrated"] = st.number_input(
-                f"{buffer_label} Calibrated Measurement (pH)", value=0.0, key=f"ph_{idx}_calibrated"
-            )
+            ph_data[f"{buffer_label}_opened"] = st.date_input(f"{buffer_label} Date Opened", key=f"ph_{idx}_date_opened")
+            ph_data[f"{buffer_label}_initial"] = st.number_input(f"{buffer_label} Initial Measurement (pH)", value=0.0, key=f"ph_{idx}_initial")
+            ph_data[f"{buffer_label}_calibrated"] = st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0, key=f"ph_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return ph_data
-
 
 def render_do_calibration():
     """Render DO probe calibration form"""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
     do_data = {}
+
     st.markdown('<h4 style="font-family: Arial; color: #0071ba;">Temperature</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -95,18 +84,23 @@ def render_do_calibration():
             do_data[f"do_{idx}_exp"] = st.date_input(f"{label} Expiration Date", key=f"do_{idx}_expiration")
         with col2:
             do_data[f"do_{idx}_opened"] = st.date_input(f"{label} Date Opened", key=f"do_{idx}_date_opened")
-            do_data[f"do_{idx}_initial"] = st.number_input(
-                f"{label} Initial Measurement (%)", value=0.0, key=f"do_{idx}_initial"
-            )
-            do_data[f"do_{idx}_calibrated"] = st.number_input(
-                f"{label} Calibrated Measurement (%)", value=0.0, key=f"do_{idx}_calibrated"
-            )
+            do_data[f"do_{idx}_initial"] = st.number_input(f"{label} Initial Measurement (%)", value=0.0, key=f"do_{idx}_initial")
+            do_data[f"do_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (%)", value=0.0, key=f"do_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return do_data
 
+def render_calibration_form(probe_type):
+    """Render appropriate calibration form based on the probe type"""
+    if probe_type == "pH Probe":
+        return render_ph_calibration()
+    elif probe_type == "DO Probe":
+        return render_do_calibration()
+    # Add other calibration forms as needed
+    return {}
 
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
+    # Initialize inventory
     if 'inventory' not in st.session_state:
         st.session_state.inventory = pd.DataFrame(columns=[
             "Serial Number", "Type", "Manufacturer", "KETOS P/N",
@@ -114,32 +108,34 @@ def registration_calibration_page():
             "Last Modified", "Status Color", "Change Date"
         ])
 
+    # Form for Probe Registration
     st.markdown('<h1 style="font-family: Arial; color: #0071ba;">📋 Probe Registration & Calibration</h1>', unsafe_allow_html=True)
 
-    manufacturer = st.text_input("Manufacturer")
-    manufacturing_date = st.date_input("Manufacturing Date", datetime.today())
-    manufacturer_part_number = st.text_input("Manufacturer Part Number")
-    probe_type = st.selectbox("Probe Type", ["pH Probe", "DO Probe", "ORP Probe", "EC Probe"])
-    ketos_part_number = st.selectbox("KETOS Part Number", KETOS_PART_NUMBERS.get(probe_type, []))
-    calibration_date = st.date_input("Calibration Date", datetime.today())
+    col1, col2 = st.columns(2)
+    with col1:
+        manufacturer = st.text_input("Manufacturer")
+        manufacturing_date = st.date_input("Manufacturing Date", datetime.today())
+        manufacturer_part_number = st.text_input("Manufacturer Part Number")
+    with col2:
+        probe_type = st.selectbox("Probe Type", ["pH Probe", "DO Probe", "ORP Probe", "EC Probe"])
+        ketos_part_number = st.selectbox("KETOS Part Number", KETOS_PART_NUMBERS.get(probe_type, []))
+        calibration_date = st.date_input("Calibration Date", datetime.today())
 
+    # Generate Serial Number
     service_years = SERVICE_LIFE.get(probe_type, 2)
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
     serial_number = get_next_serial_number(probe_type, manufacturing_date)
-
     st.text(f"Generated Serial Number: {serial_number}")
 
-    if probe_type == "pH Probe":
-        calibration_data = render_ph_calibration()
-    elif probe_type == "DO Probe":
-        calibration_data = render_do_calibration()
-    # Add other probe types if needed...
+    # Calibration Details
+    calibration_data = render_calibration_form(probe_type)
 
     if st.button("Save Probe"):
         if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
             st.error("Please fill in all required fields.")
             return
 
+        # Save probe data
         probe_data = {
             "Serial Number": serial_number,
             "Type": probe_type,
@@ -151,13 +147,13 @@ def registration_calibration_page():
             "Entry Date": datetime.now().strftime("%Y-%m-%d"),
             "Last Modified": datetime.now().strftime("%Y-%m-%d"),
             "Change Date": datetime.now().strftime("%Y-%m-%d"),
-            "Calibration Data": str(calibration_data)
+            "Calibration Data": calibration_data
         }
 
         success = add_new_probe(probe_data)
         if success:
             st.success(f"✅ Probe {serial_number} saved successfully!")
-            time.sleep(1)
+            time.sleep(1)  # Delay for user feedback
             st.rerun()
         else:
             st.error("❌ Failed to save probe.")
