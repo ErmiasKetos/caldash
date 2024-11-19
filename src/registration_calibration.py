@@ -321,41 +321,36 @@ def registration_calibration_page():
                 "Calibration Data": str(calibration_data)
             }
 
-            # Add to local inventory
-            st.session_state.inventory = pd.concat([
-                st.session_state.inventory,
-                pd.DataFrame([probe_data])
-            ], ignore_index=True)
-
-            # Save to Drive if available
-            if drive_status:
-                try:
-                    drive_save_success = st.session_state.drive_manager.save_to_drive(
+            # Add probe to inventory and save
+            success = add_new_probe(probe_data)
+            
+            if success:
+                st.success(f"✅ New probe {serial_number} registered successfully!")
+                
+                if drive_status:
+                    save_success = st.session_state.drive_manager.save_to_drive(
                         st.session_state.inventory,
                         st.session_state.drive_folder_id
                     )
-                    if drive_save_success:
+                    if save_success:
                         st.success("✅ Inventory updated and saved to Google Drive")
                         st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     else:
-                        st.warning("⚠️ Inventory updated locally but Drive save failed")
-                except Exception as drive_error:
-                    logger.error(f"Drive save error: {str(drive_error)}")
-                    st.warning("⚠️ Inventory updated locally only. Drive save failed.")
+                        st.warning("⚠️ Failed to save to Google Drive, but data is saved locally")
+                else:
+                    st.warning("⚠️ Inventory updated locally only. Google Drive not accessible.")
+
+                # Mark form as submitted for clearing
+                st.session_state.form_submitted = True
+                # Wait a moment to show success messages
+                time.sleep(1)
+                st.rerun()
             else:
-                st.warning("⚠️ Inventory updated locally only. Google Drive not accessible.")
+                st.error("❌ Failed to register probe")
+                
+    except Exception as e:
+        logger.error(f"Error saving probe: {str(e)}")
+        st.error(f"Error saving probe: {str(e)}")
 
-            st.success(f"✅ New probe {serial_number} registered successfully!")
-            
-            # Mark form as submitted for clearing
-            st.session_state.form_submitted = True
-            
-            # Rerun to clear the form
-            st.rerun()
-
-        except Exception as e:
-            logger.error(f"Error saving probe: {str(e)}")
-            st.error(f"Error saving probe: {str(e)}")
-
-        if __name__ == "__main__":
-            registration_calibration_page()
+    if __name__ == "__main__":
+        registration_calibration_page()
