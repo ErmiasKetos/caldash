@@ -172,35 +172,44 @@ def load_inventory_from_drive():
             st.error("❌ Google Drive folder ID is not set. Please configure your settings.")
             return False
 
-        # Attempt to download the inventory file
+        # Download the file from Google Drive
         st.info("📂 Attempting to load the inventory CSV from Google Drive...")
-        file_content = drive_manager.download_inventory_csv(folder_id)
-
-        # If file_content is None or empty, raise an error
-        if not file_content:
-            st.error("❌ Inventory file not found in the specified Google Drive folder.")
-            return False
+        file_content = drive_manager.download_inventory_csv(folder_id, "wbpms_inventory_2024.csv")
 
         # Parse the CSV content
-        inventory_df = pd.read_csv(file_content)
-        st.session_state.inventory = inventory_df
+        existing_inventory = pd.read_csv(file_content)
+
+        # Merge with session state inventory, avoiding duplicates
+        if 'inventory' in st.session_state and not st.session_state.inventory.empty:
+            st.session_state.inventory = pd.concat(
+                [st.session_state.inventory, existing_inventory]
+            ).drop_duplicates(subset="Serial Number", keep="last")
+        else:
+            st.session_state.inventory = existing_inventory
+
+        return True
+
+    except FileNotFoundError:
+        st.warning("⚠️ Inventory file not found. A new file will be created.")
+        st.session_state.inventory = pd.DataFrame(columns=[
+            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
+            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
+            "Last Modified", "Change Date"
+        ])
         return True
 
     except pd.errors.EmptyDataError:
-        st.error("❌ The inventory CSV file is empty. Please upload a valid file.")
-        logger.error("Empty CSV file encountered during inventory load.")
-        return False
-
-    except FileNotFoundError:
-        st.error("❌ Inventory CSV file not found in the specified Google Drive folder.")
-        logger.error("Inventory CSV file not found.")
-        return False
+        st.warning("⚠️ Inventory file is empty. Starting with a new inventory.")
+        st.session_state.inventory = pd.DataFrame(columns=[
+            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
+            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
+            "Last Modified", "Change Date"
+        ])
+        return True
 
     except Exception as e:
-        logger.error(f"Error loading inventory from Google Drive: {e}")
         st.error(f"❌ Failed to load inventory. Error: {e}")
         return False
-
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
     # Initialize inventory
