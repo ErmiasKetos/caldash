@@ -74,7 +74,7 @@ def inventory_review_page():
                 if update_probe_status(selected_probe, new_status):
                     st.success(f"✅ Updated status of {selected_probe} to {new_status}")
                     st.rerun()
-                    else:
+                else:
                         st.error("❌ Failed to update status")
                 
     # Download button
