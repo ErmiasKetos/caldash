@@ -14,8 +14,10 @@ from src.inventory_manager import initialize_inventory
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Default Google Drive folder ID
 DRIVE_FOLDER_ID = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
 
+# OAuth 2.0 configuration
 SCOPES = [
     'openid',
     'https://www.googleapis.com/auth/drive.file',
@@ -24,10 +26,27 @@ SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile'
 ]
 
+# Verify environment variables
+if not os.environ.get("GOOGLE_CLIENT_ID") or not os.environ.get("GOOGLE_CLIENT_SECRET"):
+    raise EnvironmentError("Missing required environment variables: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET")
+
+# Client configuration
+CLIENT_CONFIG = {
+    "web": {
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "redirect_uris": ["https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"],
+        "javascript_origins": ["https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app"]
+    }
+}
+
 def init_google_auth():
     """Initialize Google authentication."""
     try:
-        params = st.experimental_get_query_params()
+        # Use updated query_params instead of experimental_get_query_params
+        params = st.query_params
         if 'code' not in params:
             return False
 
@@ -37,7 +56,7 @@ def init_google_auth():
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
 
-        flow.fetch_token(code=params['code'][0])
+        flow.fetch_token(code=params['code'])
         st.session_state['credentials'] = flow.credentials
 
         # Initialize Drive manager
@@ -54,7 +73,7 @@ def init_google_auth():
         st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
 
         # Clear query parameters
-        st.experimental_set_query_params()
+        st.query_params.clear()
         
         logger.info("Authentication successful")
         return True
@@ -93,10 +112,10 @@ def main():
         st.sidebar.title("CalMS")
 
         # Handle OAuth flow
-        params = st.experimental_get_query_params()
+        params = st.query_params
         if 'code' in params and 'authenticated' not in st.session_state:
             if init_google_auth():
-                st.experimental_rerun()
+                st.rerun()
             return
 
         # Check authentication
@@ -115,14 +134,23 @@ def main():
                 st.error("Access denied. Please use your @ketos.co email.")
                 if st.button("Logout"):
                     st.session_state.clear()
-                    st.experimental_rerun()
+                    st.rerun()
                 return
         except Exception as e:
             logger.error(f"Error fetching user info: {str(e)}")
             st.error("Authentication error. Please try logging in again.")
             st.session_state.clear()
-            st.experimental_rerun()
+            st.rerun()
             return
+
+        # Debug information
+        with st.sidebar.expander("Debug Info", expanded=False):
+            st.write({
+                "Authentication Status": 'credentials' in st.session_state,
+                "Drive Connected": 'drive_manager' in st.session_state,
+                "Inventory Loaded": 'inventory' in st.session_state,
+                "Email": user_info.get('email', 'Not available')
+            })
 
         # Sidebar navigation
         page = st.sidebar.radio(
