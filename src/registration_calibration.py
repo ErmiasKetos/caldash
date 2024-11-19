@@ -1,118 +1,311 @@
 import streamlit as st
 import pandas as pd
-from datetime import timedelta, datetime
-from .drive_manager import save_inventory
+from datetime import datetime, timedelta
 import logging
+from .drive_manager import DriveManager
+from .inventory_manager import (
+    add_new_probe,
+    get_next_serial_number,
+    save_inventory,
+    STATUS_COLORS
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Autofill options for KETOS Part Number
-ketos_part_numbers = {
+KETOS_PART_NUMBERS = {
     "pH Probe": ["400-00260", "400-00292"],
     "DO Probe": ["300-00056"],
     "ORP Probe": ["400-00261"],
     "EC Probe": ["400-00259", "400-00279"],
 }
 
-# Expected Service Life for probes
-service_life = {
+# Expected Service Life for probes (in years)
+SERVICE_LIFE = {
     "pH Probe": 2,
     "ORP Probe": 2,
     "DO Probe": 4,
     "EC Probe": 10,
 }
 
+def render_ph_calibration():
+    """Render pH probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
+    ph_data = {}
+    
+    for idx, (buffer_label, color) in enumerate([("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
+        st.markdown(
+            f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
+            f'<h4 style="font-family: Arial; color: #333;">{buffer_label} Buffer</h4>',
+            unsafe_allow_html=True,
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            ph_data[f"{buffer_label}_control"] = st.text_input(
+                f"{buffer_label} Control Number", 
+                key=f"ph_{idx}_control_number"
+            )
+            ph_data[f"{buffer_label}_exp"] = st.date_input(
+                f"{buffer_label} Expiration Date", 
+                key=f"ph_{idx}_expiration"
+            )
+        with col2:
+            ph_data[f"{buffer_label}_opened"] = st.date_input(
+                f"{buffer_label} Date Opened", 
+                key=f"ph_{idx}_date_opened"
+            )
+            ph_data[f"{buffer_label}_initial"] = st.number_input(
+                f"{buffer_label} Initial Measurement (pH)", 
+                value=0.0, 
+                key=f"ph_{idx}_initial"
+            )
+            ph_data[f"{buffer_label}_calibrated"] = st.number_input(
+                f"{buffer_label} Calibrated Measurement (pH)", 
+                value=0.0, 
+                key=f"ph_{idx}_calibrated"
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+    return ph_data
+
+def render_do_calibration():
+    """Render DO probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
+    do_data = {}
+    
+    # Temperature section
+    st.markdown('<h4 style="font-family: Arial; color: #0071ba;">Temperature</h4>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        do_data['temp_initial'] = st.number_input(
+            "Initial Temperature (°C)", 
+            value=0.0, 
+            key="do_temp_initial"
+        )
+    with col2:
+        do_data['temp_calibrated'] = st.number_input(
+            "Calibrated Temperature (°C)", 
+            value=0.0, 
+            key="do_temp_calibrated"
+        )
+
+    # DO Calibration sections
+    for idx, label in enumerate(["0% DO Calibration", "100% DO Calibration"]):
+        st.markdown(
+            f'<div style="background-color: #e8f8f2; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
+            f'<h4 style="font-family: Arial; color: #333;">{label}</h4>',
+            unsafe_allow_html=True,
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            do_data[f"do_{idx}_control"] = st.text_input(
+                f"{label} Control Number", 
+                key=f"do_{idx}_control_number"
+            )
+            do_data[f"do_{idx}_exp"] = st.date_input(
+                f"{label} Expiration Date", 
+                key=f"do_{idx}_expiration"
+            )
+        with col2:
+            do_data[f"do_{idx}_opened"] = st.date_input(
+                f"{label} Date Opened", 
+                key=f"do_{idx}_date_opened"
+            )
+            do_data[f"do_{idx}_initial"] = st.number_input(
+                f"{label} Initial Measurement (%)", 
+                value=0.0, 
+                key=f"do_{idx}_initial"
+            )
+            do_data[f"do_{idx}_calibrated"] = st.number_input(
+                f"{label} Calibrated Measurement (%)", 
+                value=0.0, 
+                key=f"do_{idx}_calibrated"
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+    return do_data
+
+def render_orp_calibration():
+    """Render ORP probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
+    orp_data = {}
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        orp_data['control_number'] = st.text_input("Control Number", key="orp_control_number")
+        orp_data['expiration'] = st.date_input("Expiration Date", key="orp_expiration")
+    with col2:
+        orp_data['date_opened'] = st.date_input("Date Opened", key="orp_date_opened")
+        orp_data['initial'] = st.number_input("Initial Measurement (mV)", value=0.0, key="orp_initial")
+        orp_data['calibrated'] = st.number_input("Calibrated Measurement (mV)", value=0.0, key="orp_calibrated")
+    return orp_data
+
+def render_ec_calibration():
+    """Render EC probe calibration form"""
+    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
+    ec_data = {}
+    
+    for idx, label in enumerate(["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]):
+        st.markdown(
+            f'<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
+            f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>',
+            unsafe_allow_html=True,
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            ec_data[f"ec_{idx}_control"] = st.text_input(
+                f"{label} Control Number", 
+                key=f"ec_{idx}_control_number"
+            )
+            ec_data[f"ec_{idx}_exp"] = st.date_input(
+                f"{label} Expiration Date", 
+                key=f"ec_{idx}_expiration"
+            )
+        with col2:
+            ec_data[f"ec_{idx}_opened"] = st.date_input(
+                f"{label} Date Opened", 
+                key=f"ec_{idx}_date_opened"
+            )
+            ec_data[f"ec_{idx}_initial"] = st.number_input(
+                f"{label} Initial Measurement (μS/cm or mS/cm)", 
+                value=0.0, 
+                key=f"ec_{idx}_initial"
+            )
+            ec_data[f"ec_{idx}_calibrated"] = st.number_input(
+                f"{label} Calibrated Measurement (μS/cm or mS/cm)", 
+                value=0.0, 
+                key=f"ec_{idx}_calibrated"
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+    return ec_data
+
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
+    # Initialize session state for inventory if not exists
     if 'inventory' not in st.session_state:
         st.session_state.inventory = pd.DataFrame(columns=[
             "Serial Number", "Type", "Manufacturer", "KETOS P/N",
-            "Mfg P/N", "Next Calibration", "Status"
+            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
+            "Last Modified", "Status Color", "Change Date"
         ])
 
     # Title
     st.markdown(
-        f'<h1 style="font-family: Arial; font-size: 32px; color: #0071ba;">📋 Probe Registration & Calibration</h1>',
+        '<h1 style="font-family: Arial, sans-serif; font-size: 32px; color: #0071ba;">📋 Probe Registration & Calibration</h1>',
         unsafe_allow_html=True,
     )
 
-    # General Section: Probe Information
+    # Debug information
+    with st.sidebar.expander("Debug Info", expanded=False):
+        st.write({
+            "Drive Connected": 'drive_manager' in st.session_state,
+            "Inventory Records": len(st.session_state.inventory),
+            "Last Save": st.session_state.get('last_save_time', 'Never')
+        })
+
+    # Probe Information Section
     st.markdown('<h2 style="font-family: Arial; color: #333;">Probe Information</h2>', unsafe_allow_html=True)
+    
     col1, col2 = st.columns(2)
     with col1:
         manufacturer = st.text_input("Manufacturer", key="manufacturer")
         manufacturing_date = st.date_input("Manufacturing Date", datetime.today(), key="manufacturing_date")
         manufacturer_part_number = st.text_input("Manufacturer Part Number", key="manufacturer_part_number")
+    
     with col2:
-        probe_type = st.selectbox("Probe Type", ["pH Probe", "DO Probe", "ORP Probe", "EC Probe"], key="probe_type")
+        probe_type = st.selectbox(
+            "Probe Type",
+            ["pH Probe", "DO Probe", "ORP Probe", "EC Probe"],
+            key="probe_type"
+        )
         ketos_part_number = st.selectbox(
             "KETOS Part Number",
-            ketos_part_numbers.get(probe_type, []),
+            KETOS_PART_NUMBERS.get(probe_type, []),
             key="ketos_part_number"
         )
         calibration_date = st.date_input("Calibration Date", datetime.today(), key="calibration_date")
 
-    # Serial Number Generation
-    service_years = service_life.get(probe_type, 1)
+    # Generate Serial Number
+    service_years = SERVICE_LIFE.get(probe_type, 2)  # Default 2 years
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
-    expire_yymm = expire_date.strftime("%y%m")
-    serial_number = f"{probe_type.split()[0]}_{expire_yymm}_{len(st.session_state.inventory) + 1:05d}"
+    serial_number = get_next_serial_number(probe_type, manufacturing_date)
     st.text(f"Generated Serial Number: {serial_number}")
 
+    # Calibration Details Section
+    st.markdown(
+        """
+        <div style="border: 2px solid #0071ba; padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h2 style="font-family: Arial; color: #0071ba; text-align: center;">Calibration Details</h2>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Render appropriate calibration form based on probe type
+    calibration_data = None
+    if probe_type == "pH Probe":
+        calibration_data = render_ph_calibration()
+    elif probe_type == "DO Probe":
+        calibration_data = render_do_calibration()
+    elif probe_type == "ORP Probe":
+        calibration_data = render_orp_calibration()
+    elif probe_type == "EC Probe":
+        calibration_data = render_ec_calibration()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
     # Save Button
-    if st.button("Save"):
-        if not manufacturer or not manufacturer_part_number or not ketos_part_number:
+    if st.button("Save Probe"):
+        if not all([manufacturer, manufacturer_part_number, ketos_part_number]):
             st.error("Please fill in all required fields.")
-        else:
-            try:
-                # Create new row
-                next_calibration = calibration_date + timedelta(days=365)
-                new_row = {
-                    "Serial Number": serial_number,
-                    "Type": probe_type,
-                    "Manufacturer": manufacturer,
-                    "KETOS P/N": ketos_part_number,
-                    "Mfg P/N": manufacturer_part_number,
-                    "Next Calibration": next_calibration.strftime("%Y-%m-%d"),
-                    "Status": "Active",
-                }
+            return
+
+        try:
+            # Prepare probe data
+            probe_data = {
+                "Serial Number": serial_number,
+                "Type": probe_type,
+                "Manufacturer": manufacturer,
+                "KETOS P/N": ketos_part_number,
+                "Mfg P/N": manufacturer_part_number,
+                "Next Calibration": (calibration_date + timedelta(days=365)).strftime("%Y-%m-%d"),
+                "Status": "Instock",
+                "Entry Date": datetime.now().strftime("%Y-%m-%d"),
+                "Last Modified": datetime.now().strftime("%Y-%m-%d"),
+                "Status Color": STATUS_COLORS["Instock"],
+                "Change Date": datetime.now().strftime("%Y-%m-%d"),
+                "Calibration Data": str(calibration_data)  # Store calibration data as string
+            }
+
+            # Add probe to inventory
+            success = add_new_probe(probe_data)
+            
+            if success:
+                st.success(f"✅ New probe {serial_number} registered successfully!")
                 
-                # Create a single-row DataFrame for the new entry
-                new_row_df = pd.DataFrame([new_row])
-
-                # Append the new row to the inventory
-                st.session_state["inventory"] = pd.concat([st.session_state["inventory"], new_row_df], ignore_index=True)
-
-                # Save inventory with the specified file name
-                inventory_file_name = "wbpms_inventory_2024.csv"
-                save_inventory(st.session_state["inventory"], inventory_file_name, version_control=True)
-
-                st.success("New probe registered successfully!")
-                
-                # File paths
-                local_file_path = "wbpms_inventory_2024.csv"
-                drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
-
-                # Try saving to Google Drive and locally
-                try:
-                    if save_inventory(
-                        inventory=st.session_state["inventory"],
-                        file_path=local_file_path,
-                        drive_manager=st.session_state.get("drive_manager"),  # Ensure DriveManager is initialized
-                    ):
-                        st.success("✅ New probe registered and saved to Google Drive successfully!")
+                # Save to Drive if available
+                if 'drive_manager' in st.session_state:
+                    save_success = save_inventory(st.session_state.inventory)
+                    if save_success:
+                        st.success("✅ Inventory saved to Google Drive")
                     else:
-                        st.warning("⚠️ Probe registered and saved locally, but Google Drive save failed.")
-                        st.info("Please check Google Drive settings in the sidebar.")
-                except Exception as e:
-                    # Fallback to local save only
-                    try:
-                        st.session_state["inventory"].to_csv(local_file_path, index=False)
-                        st.warning(f"⚠️ Probe registered and saved locally, but Google Drive save failed: {str(e)}")
-                        st.info("Please check Google Drive settings in the sidebar.")
-                    except Exception as local_error:
-                        st.error(f"❌ Failed to save locally as well: {local_error}")
-            except Exception as e:
-                st.error(f"Unexpected error: {e}")
+                        st.warning("⚠️ Failed to save to Google Drive")
+                
+                # Clear form fields
+                st.session_state['manufacturer'] = ""
+                st.session_state['manufacturer_part_number'] = ""
+                st.session_state['ketos_part_number'] = KETOS_PART_NUMBERS[probe_type][0]
+                
+                # Rerun to refresh the page
+                st.rerun()
+            else:
+                st.error("❌ Failed to register probe")
+
+        except Exception as e:
+            logger.error(f"Error saving probe: {str(e)}")
+            st.error(f"Error saving probe: {str(e)}")
+
+if __name__ == "__main__":
+    registration_calibration_page()
