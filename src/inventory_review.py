@@ -55,9 +55,9 @@ def periodic_save():
 # Helper function to determine save location
 def get_file_path():
     if st.session_state["save_location"] == "Local Computer":
-        return "inventory.csv"
+        return "wbpms_inventory_2024.csv"
     elif st.session_state["save_location"] == "Google Drive":
-        return "inventory_google_drive.csv"
+        return "wbpms_inventory_2024.csv"
 
 def inventory_review_page():
     """Display and manage inventory"""
