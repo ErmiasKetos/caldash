@@ -2,8 +2,8 @@ import streamlit as st
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-import logging
 import os
+import logging
 from datetime import datetime
 
 # Configure logging
@@ -33,20 +33,11 @@ class DriveManager:
         try:
             if not self.service:
                 logger.error("Drive service not initialized")
-                st.error("Drive service not initialized. Please log in again.")
                 return False
             
-            # First, try to get folder metadata
             folder = self.service.files().get(
                 fileId=folder_id,
                 fields="id, name, permissions"
-            ).execute()
-            
-            # Then, try to list files in the folder to verify write access
-            results = self.service.files().list(
-                q=f"'{folder_id}' in parents",
-                fields="files(id, name)",
-                pageSize=1
             ).execute()
             
             logger.info(f"Successfully verified access to folder: {folder.get('name', 'Unknown')}")
@@ -54,30 +45,22 @@ class DriveManager:
             
         except Exception as e:
             logger.error(f"Failed to verify folder access: {str(e)}")
-            if "404" in str(e):
-                st.error("❌ Folder not found. Please check the folder ID.")
-            elif "403" in str(e):
-                st.error("❌ Permission denied. Please make sure you have access to the folder.")
-                st.info("Try sharing the folder with your email address and giving it 'Editor' access.")
-            else:
-                st.error(f"❌ Failed to verify folder access: {str(e)}")
             return False
 
     def save_to_drive(self, file_path, drive_folder_id):
         """Save file to Google Drive in specified folder"""
-        if not os.path.exists(file_path):
-            logger.error(f"File not found: {file_path}")
-            st.error("File not found locally.")
-            return False
-
         try:
+            if not os.path.exists(file_path):
+                logger.error(f"File not found: {file_path}")
+                return False
+
             if not self.service:
                 logger.error("Drive service not initialized")
-                st.error("Drive service not initialized. Please log in again.")
                 return False
                 
-            # First verify folder access
+            # Verify folder access first
             if not self.verify_folder_access(drive_folder_id):
+                logger.error(f"Cannot access folder: {drive_folder_id}")
                 return False
 
             # Create file metadata
@@ -102,24 +85,16 @@ class DriveManager:
             ).execute()
             
             logger.info(f"File saved to Drive successfully: {file.get('name')} ({file.get('id')})")
-            st.success(f"✅ File saved successfully as '{file.get('name')}'")
-            st.info(f"View file: {file.get('webViewLink')}")
             return True
             
         except Exception as e:
             logger.error(f"Failed to save to Drive: {str(e)}")
-            if "404" in str(e):
-                st.error("❌ Folder not found. Please check the folder ID.")
-            elif "403" in str(e):
-                st.error("❌ Permission denied. Please make sure you have write access to the folder.")
-            else:
-                st.error(f"❌ Failed to save to Drive: {str(e)}")
             return False
 
 def save_inventory(inventory, file_path, drive_manager=None):
     """Save inventory to local file and Google Drive"""
     try:
-        # Save locally
+        # Save locally first
         inventory.to_csv(file_path, index=False)
         logger.info(f"Inventory saved locally: {file_path}")
         
@@ -130,17 +105,28 @@ def save_inventory(inventory, file_path, drive_manager=None):
         logger.info(f"Backup created: {backup_path}")
         
         # Save to Drive if available
-        if drive_manager and drive_manager.service and 'drive_folder_id' in st.session_state:
-            folder_id = st.session_state.drive_folder_id
-            if folder_id and folder_id != "your_folder_id":
-                success = drive_manager.save_to_drive(file_path, folder_id)
-                if success:
-                    st.success("Inventory saved to Google Drive")
+        if drive_manager and drive_manager.service:
+            folder_id = st.session_state.get('drive_folder_id')
+            if folder_id:
+                logger.info(f"Attempting to save to Drive folder: {folder_id}")
+                if drive_manager.save_to_drive(file_path, folder_id):
+                    st.success("✅ File saved to Google Drive successfully")
+                    logger.info("Successfully saved to Google Drive")
+                    return True
                 else:
-                    st.error("Failed to save to Google Drive")
+                    st.error("❌ Failed to save to Google Drive")
+                    logger.error("Failed to save to Google Drive")
+                    return False
             else:
-                st.warning("Please configure Google Drive folder in settings")
+                st.warning("⚠️ No Google Drive folder configured")
+                logger.warning("No Drive folder ID found")
+                return False
+        else:
+            st.info("ℹ️ Google Drive integration not available")
+            logger.info("Drive manager not available")
+            return False
             
     except Exception as e:
         logger.error(f"Failed to save inventory: {str(e)}")
         st.error(f"Failed to save inventory: {str(e)}")
+        return False
