@@ -117,7 +117,9 @@ def main():
         st.sidebar.title("CalMS")
         if 'code' in st.experimental_get_query_params():
             if init_google_auth():
-                st.rerun()
+                st.session_state['authenticated'] = True
+                st.experimental_rerun()  # Rerun the app after successful authentication
+
             return
 
         if not check_user_auth():
