@@ -61,9 +61,11 @@ class DriveManager:
         """Verify if the folder exists and is accessible"""
         try:
             if not self.service:
+                logger.error("Drive service not initialized")
                 return False
             
             self.service.files().get(fileId=folder_id).execute()
+            logger.info(f"Folder access verified for ID: {folder_id}")
             return True
         except Exception as e:
             logger.error(f"Failed to verify folder access: {str(e)}")
@@ -119,9 +121,15 @@ def save_inventory(inventory, file_path, drive_manager=None):
         
         # Save to Drive if available
         if drive_manager and drive_manager.service and 'drive_folder_id' in st.session_state:
-            success = drive_manager.save_to_drive(file_path, st.session_state.drive_folder_id)
-            if success:
-                st.success("Inventory saved to Google Drive")
+            folder_id = st.session_state.drive_folder_id
+            if folder_id and folder_id != "your_folder_id":
+                success = drive_manager.save_to_drive(file_path, folder_id)
+                if success:
+                    st.success("Inventory saved to Google Drive")
+                else:
+                    st.error("Failed to save to Google Drive")
+            else:
+                st.warning("Please configure Google Drive folder in settings")
             
     except Exception as e:
         logger.error(f"Failed to save inventory: {str(e)}")
@@ -132,8 +140,10 @@ def periodic_save():
     while True:
         try:
             time.sleep(600)  # 10 minutes
-            if 'inventory' in st.session_state and 'drive_manager' in st.session_state:
-                save_inventory(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager)
+            if all(key in st.session_state for key in ['inventory', 'drive_manager', 'drive_folder_id']):
+                folder_id = st.session_state.drive_folder_id
+                if folder_id and folder_id != "your_folder_id":
+                    save_inventory(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager)
         except Exception as e:
             logger.error(f"Periodic save failed: {str(e)}")
 
@@ -177,10 +187,6 @@ def init_google_auth():
             # Initialize Drive manager with new credentials
             if 'drive_manager' in st.session_state:
                 st.session_state.drive_manager.authenticate(flow.credentials)
-            
-            # Set default Drive folder
-            if 'drive_folder_id' not in st.session_state:
-                st.session_state.drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
             
             # Clear URL parameters
             st.experimental_set_query_params()
@@ -229,22 +235,31 @@ def main():
         
         # Google Drive Settings in sidebar
         with st.sidebar.expander("Google Drive Settings"):
-            if 'drive_folder_id' not in st.session_state:
-                st.session_state.drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+            st.info("Configure Google Drive folder for automatic saving")
             
-            current_folder = st.session_state.drive_folder_id
+            current_folder = st.session_state.get('drive_folder_id', "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i")
             new_folder_id = st.text_input(
                 "Google Drive Folder ID",
                 value=current_folder,
-                help="ID from your Google Drive folder URL"
+                help="Enter the folder ID from your Google Drive URL"
             )
             
-            if new_folder_id != current_folder:
+            if st.button("Verify Folder Access"):
                 if st.session_state.drive_manager.verify_folder_access(new_folder_id):
                     st.session_state.drive_folder_id = new_folder_id
-                    st.success("✅ Folder access verified!")
+                    st.success("✅ Folder access verified successfully!")
+                    # Test save to verify everything works
+                    save_inventory(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager)
                 else:
                     st.error("❌ Cannot access this folder. Please check the ID and permissions.")
+                    st.info("Make sure the folder is shared with your Google account")
+
+            if 'drive_folder_id' in st.session_state:
+                st.info(f"Current folder ID: {st.session_state.drive_folder_id}")
+                
+                # Add a test save button
+                if st.button("Test Save to Drive"):
+                    save_inventory(st.session_state.inventory, 'inventory.csv', st.session_state.drive_manager)
 
         # Navigation
         page = st.sidebar.radio(
@@ -283,6 +298,11 @@ if __name__ == "__main__":
                     "Mfg P/N", "Next Calibration", "Status"
                 ])
                 logger.info("Created new inventory")
+
+        # Initialize drive_folder_id if not set
+        if 'drive_folder_id' not in st.session_state:
+            st.session_state.drive_folder_id = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+            logger.info("Set default drive folder ID")
 
         if 'drive_manager' not in st.session_state:
             st.session_state.drive_manager = DriveManager()
