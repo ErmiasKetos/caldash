@@ -53,23 +53,59 @@ def get_file_path():
     elif st.session_state["save_location"] == "Google Drive":
         return "inventory_google_drive.csv"
 
-# Inventory review page
 def inventory_review_page():
-    if "inventory" not in st.session_state:
-        st.session_state["inventory"] = load_inventory(get_file_path())
-
-    # Start periodic saving in a background thread
-    if "save_thread" not in st.session_state:
-        save_thread = Thread(target=periodic_save, daemon=True)
-        save_thread.start()
-        st.session_state["save_thread"] = save_thread
-
-    # Display inventory
+    """Display and manage inventory"""
     st.markdown("<h2 style='color: #0071ba;'>Inventory Review</h2>", unsafe_allow_html=True)
-    st.dataframe(st.session_state["inventory"])
+    
+    # Initialize inventory if needed
+    initialize_inventory()
+    
+    # Add status filter
+    status_filter = st.selectbox(
+        "Filter by Status",
+        ["All", "Instock", "Shipped", "Scraped"]
+    )
+    
+    # Filter inventory based on selection
+    filtered_inventory = st.session_state.inventory
+    if status_filter != "All":
+        filtered_inventory = filtered_inventory[filtered_inventory['Status'] == status_filter]
+    
+    # Display inventory with status colors
+    def color_rows(row):
+        return [f"background-color: {row['Status Color']}"] * len(row)
+    
+    st.dataframe(
+        filtered_inventory.style.apply(color_rows, axis=1),
+        height=400
+    )
+    
+    # Status update section
+    st.markdown("### Update Probe Status")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        selected_probe = st.selectbox(
+            "Select Probe",
+            st.session_state.inventory['Serial Number'].tolist()
+        )
+    
+    with col2:
+        new_status = st.selectbox(
+            "New Status",
+            ["Instock", "Shipped", "Scraped"],
+            index=0
+        )
+    
+    if st.button("Update Status"):
+        if st.button("Confirm Status Change"):
+            if update_probe_status(selected_probe, new_status):
+                st.success(f"Updated status of {selected_probe} to {new_status}")
+            else:
+                st.error("Failed to update status")
 
-    # Allow user to download the inventory
-    csv = st.session_state["inventory"].to_csv(index=False).encode("utf-8")
+    # Download button
+    csv = filtered_inventory.to_csv(index=False).encode("utf-8")
     st.download_button(
         label="Download Inventory as CSV",
         data=csv,
