@@ -21,6 +21,8 @@ if "authentication_status" not in st.session_state:
     st.session_state["authentication_status"] = None
 if "name" not in st.session_state:
     st.session_state["name"] = None
+if "page" not in st.session_state:  # Initialize page to default value
+    st.session_state["page"] = "Probe Registration & Calibration"
 
 # Login Section
 if st.session_state["authentication_status"] is None or st.session_state["authentication_status"] is False:
@@ -40,13 +42,14 @@ if st.session_state["authentication_status"] is None or st.session_state["authen
 if st.session_state["authentication_status"]:
     st.sidebar.title(f"Welcome, {st.session_state['name']}")
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
+    st.session_state["page"] = st.sidebar.radio(
         "Select Page",
         ["Probe Registration & Calibration", "Inventory Review"],
     )
 
 # App Navigation
-if page == "Probe Registration & Calibration":
-    registration_calibration_page()
-elif page == "Inventory Review":
-    inventory_review_page()
+if st.session_state["authentication_status"]:
+    if st.session_state["page"] == "Probe Registration & Calibration":
+        registration_calibration_page()
+    elif st.session_state["page"] == "Inventory Review":
+        inventory_review_page()
