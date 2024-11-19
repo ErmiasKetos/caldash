@@ -89,10 +89,10 @@ def init_google_auth():
 
         # Verify folder access (optional for Drive integration)
         if 'drive_folder_id' not in st.session_state:
-            st.session_state['drive_folder_id'] = "DRIVE_FOLDER_ID"
+            st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
 
         if st.session_state.drive_manager.verify_folder_access(DRIVE_FOLDER_ID):
-            logger.info(f"Drive folder access verified for folder ID: (DRIVE_FOLDER_ID)
+            logger.info(f"Drive folder access verified for folder ID: {DRIVE_FOLDER_ID}")
         else:
             st.warning("⚠️ Drive folder access verification failed. Check permissions.")
 
