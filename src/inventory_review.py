@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 
+
 def inventory_review_page():
     # Initialize inventory in session state
     if "inventory" not in st.session_state:
@@ -15,8 +16,11 @@ def inventory_review_page():
                 "Status",
             ]
         )
-    
-    st.title("Inventory Review")
+
+    st.markdown(
+        '<h1 style="font-family: Arial, sans-serif; font-size: 32px; color: #0071ba;">📋 Inventory Review</h1>',
+        unsafe_allow_html=True,
+    )
 
     # Load inventory data from session state
     inventory_data = st.session_state["inventory"]
