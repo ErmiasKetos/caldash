@@ -49,22 +49,12 @@ def registration_calibration_page():
         calibration_date = st.date_input("Calibration Date", datetime.today())
 
     # Serial Number Generation
-     expected_service_life = 2  # Example value
-        expire_date = mfg_date + timedelta(days=expected_service_life * 365)
-        expire_yymm = expire_date.strftime("%y%m")
-        serial_number = f"{probe_type}_{expire_yymm}_00001"
-        st.text(f"Generated Serial Number: {serial_number}")
-        
-        st.markdown('<div class="section-title">Calibration Details</div>', unsafe_allow_html=True)
-        if probe_type == "pH":
-            st.text_input("pH Buffer 4 Control Number")
-            st.date_input("pH Buffer 4 Expiration")
-            st.text_input("pH Buffer 7 Control Number")
-            st.date_input("pH Buffer 7 Expiration")
-        elif probe_type == "DO":
-            st.text_input("DO Control Number")
-            st.date_input("DO Expiration")
-            st.number_input("Initial DO Value (%)")
+       # Serial Number Generation
+    service_years = service_life.get(probe_type, 1)
+    expire_date = manufacturing_date + timedelta(days=service_years * 365)
+    expire_yymm = expire_date.strftime("%y%m")
+    serial_number = f"{probe_type.split()[0]}_{expire_yymm}_{len(st.session_state['inventory']) + 1:05d}"
+    st.text(f"Generated Serial Number: {serial_number}")
 
     # Calibration Details Section
     st.markdown(
