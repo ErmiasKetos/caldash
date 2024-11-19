@@ -56,10 +56,10 @@ def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
 def check_user_auth():
     if 'credentials' not in st.session_state:
         flow = Flow.from_client_config(
-            client_config=CLIENT_CONFIG,
-            scopes=SCOPES,
-            redirect_uri="http://localhost:8501"
-        )
+    client_config=CLIENT_CONFIG,
+    scopes=SCOPES,
+    redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+)
         authorization_url, _ = flow.authorization_url(prompt="consent")
         st.markdown(f"[Login with Google]({authorization_url})")
         return False
@@ -130,8 +130,7 @@ if __name__ == "__main__":
 # Handle OAuth 2.0 callback
 if 'code' in st.experimental_get_query_params():
     flow = Flow.from_client_config(
-        client_config=CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri="http://localhost:8501"
-    )
-    
+    client_config=CLIENT_CONFIG,
+    scopes=SCOPES,
+    redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+)
