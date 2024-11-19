@@ -10,6 +10,7 @@ import os
 import logging
 from datetime import datetime
 from src.registration_calibration import registration_calibration_page
+from src.drive_manager import DriveManager, save_inventory
 from src.inventory_review import inventory_review_page
 
 # Configure logging
