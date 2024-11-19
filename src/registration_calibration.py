@@ -8,7 +8,8 @@ import os
 import time
 import threading
 import logging
-from src.drive_manager import DriveManager, save_inventory
+from .drive_manager import DriveManager
+from .inventory_manager import add_new_probe, get_next_serial_number
 from src.inventory_manager import add_new_probe, get_next_serial_number
 
 # Configure logging
