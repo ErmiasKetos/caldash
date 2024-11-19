@@ -7,7 +7,6 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from dotenv import load_dotenv
 from app import DriveManager
-load_dotenv()
 import os
 import time
 import threading
