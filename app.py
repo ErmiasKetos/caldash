@@ -15,6 +15,9 @@ from src.inventory_manager import initialize_inventory
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Default Google Drive folder ID
+DRIVE_FOLDER_ID = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"  # folder ID
+
 # OAuth 2.0 configuration
 SCOPES = [
     'openid',
@@ -86,10 +89,10 @@ def init_google_auth():
 
         # Verify folder access (optional for Drive integration)
         if 'drive_folder_id' not in st.session_state:
-            st.session_state['drive_folder_id'] = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
+            st.session_state['drive_folder_id'] = "DRIVE_FOLDER_ID"
 
-        if st.session_state.drive_manager.verify_folder_access(19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i):
-            logger.info(f"Drive folder access verified for folder ID: {19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i}")
+        if st.session_state.drive_manager.verify_folder_access(DRIVE_FOLDER_ID):
+            logger.info(f"Drive folder access verified for folder ID: {DRIVE_FOLDER_ID)
         else:
             st.warning("⚠️ Drive folder access verification failed. Check permissions.")
 
