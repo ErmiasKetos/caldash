@@ -1,5 +1,7 @@
 import streamlit as st
 import streamlit_authenticator as stauth
+from src.registration_calibration import registration_calibration_page
+from src.inventory_review import inventory_review_page
 
 # User configuration with plaintext passwords
 names = ["Ermias", "Girma Seifu"]
