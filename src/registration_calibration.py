@@ -354,4 +354,4 @@ def registration_calibration_page():
 
 
 if __name__ == "__main__":
-registration_calibration_page()
+    registration_calibration_page()
