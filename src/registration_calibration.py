@@ -3,6 +3,14 @@ import pandas as pd
 from datetime import timedelta, datetime
 from src.inventory_review import save_inventory, get_file_path
 
+# Autofill options for KETOS Part Number
+ketos_part_numbers = {
+    "pH Probe": ["400-00260", "400-00292"],
+    "DO Probe": ["300-00056"],
+    "ORP Probe": ["400-00261"],
+    "EC Probe": ["400-00259", "400-00279"],
+}
+
 # Function to render the registration and calibration page
 def registration_calibration_page():
     # Initialize inventory in session state
@@ -34,7 +42,10 @@ def registration_calibration_page():
         manufacturer_part_number = st.text_input("Manufacturer Part Number")
     with col2:
         probe_type = st.selectbox("Probe Type", ["pH Probe", "DO Probe", "ORP Probe", "EC Probe"])
-        ketos_part_number = st.text_input("KETOS Part Number")
+        ketos_part_number = st.selectbox(
+            "KETOS Part Number",
+            ketos_part_numbers.get(probe_type, []),
+        )
         calibration_date = st.date_input("Calibration Date", datetime.today())
 
     # Serial Number Generation
@@ -64,25 +75,24 @@ def registration_calibration_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Save Button
-if st.button("Save"):
-    next_calibration = calibration_date + timedelta(days=365)  # Default 1 year
-    new_row = {
-        "Serial Number": serial_number,
-        "Type": probe_type,
-        "Manufacturer": manufacturer,
-        "KETOS P/N": ketos_part_number,
-        "Mfg P/N": manufacturer_part_number,
-        "Next Calibration": next_calibration.strftime("%Y-%m-%d"),
-        "Status": "Active",
-    }
-    # Create a single-row DataFrame for the new entry
-    new_row_df = pd.DataFrame([new_row])
+    if st.button("Save"):
+        next_calibration = calibration_date + timedelta(days=365)  # Default 1 year
+        new_row = {
+            "Serial Number": serial_number,
+            "Type": probe_type,
+            "Manufacturer": manufacturer,
+            "KETOS P/N": ketos_part_number,
+            "Mfg P/N": manufacturer_part_number,
+            "Next Calibration": next_calibration.strftime("%Y-%m-%d"),
+            "Status": "Active",
+        }
+        # Create a single-row DataFrame for the new entry
+        new_row_df = pd.DataFrame([new_row])
 
-    # Append the new row to the inventory
-    st.session_state["inventory"] = pd.concat([st.session_state["inventory"], new_row_df], ignore_index=True)
-    save_inventory(st.session_state["inventory"], get_file_path(), version_control=True)
-    st.success("New probe registered successfully!")
-
+        # Append the new row to the inventory
+        st.session_state["inventory"] = pd.concat([st.session_state["inventory"], new_row_df], ignore_index=True)
+        save_inventory(st.session_state["inventory"], get_file_path(), version_control=True)
+        st.success("New probe registered successfully!")
 
 # pH Calibration Rendering
 def render_ph_calibration():
