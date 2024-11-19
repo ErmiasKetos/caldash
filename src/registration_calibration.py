@@ -347,9 +347,9 @@ def registration_calibration_page():
             # Rerun to clear the form
             st.rerun()
 
-    except Exception as e:
-        logger.error(f"Error saving probe: {str(e)}")
-        st.error(f"Error saving probe: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error saving probe: {str(e)}")
+            st.error(f"Error saving probe: {str(e)}")
 
 if __name__ == "__main__":
 registration_calibration_page()
