@@ -38,7 +38,6 @@ STATUS_COLORS = {
     'Scraped': '#FFB6C6'   # Red
 }
 
-
 def render_ph_calibration():
     """Render pH probe calibration form"""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
@@ -60,74 +59,6 @@ def render_ph_calibration():
             ph_data[f"{buffer_label}_calibrated"] = st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0, key=f"ph_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return ph_data
-
-
-def render_do_calibration():
-    """Render DO probe calibration form"""
-    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
-    do_data = {}
-
-    st.markdown('<h4 style="font-family: Arial; color: #0071ba;">Temperature</h4>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        do_data['temp_initial'] = st.number_input("Initial Temperature (°C)", value=0.0, key="do_temp_initial")
-    with col2:
-        do_data['temp_calibrated'] = st.number_input("Calibrated Temperature (°C)", value=0.0, key="do_temp_calibrated")
-
-    for idx, label in enumerate(["0% DO Calibration", "100% DO Calibration"]):
-        st.markdown(
-            f'<div style="background-color: #e8f8f2; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
-            f'<h4 style="font-family: Arial; color: #333;">{label}</h4>',
-            unsafe_allow_html=True,
-        )
-        col1, col2 = st.columns(2)
-        with col1:
-            do_data[f"do_{idx}_control"] = st.text_input(f"{label} Control Number", key=f"do_{idx}_control_number")
-            do_data[f"do_{idx}_exp"] = st.date_input(f"{label} Expiration Date", key=f"do_{idx}_expiration")
-        with col2:
-            do_data[f"do_{idx}_opened"] = st.date_input(f"{label} Date Opened", key=f"do_{idx}_date_opened")
-            do_data[f"do_{idx}_initial"] = st.number_input(f"{label} Initial Measurement (%)", value=0.0, key=f"do_{idx}_initial")
-            do_data[f"do_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (%)", value=0.0, key=f"do_{idx}_calibrated")
-        st.markdown('</div>', unsafe_allow_html=True)
-    return do_data
-
-
-def render_orp_calibration():
-    """Render ORP probe calibration form"""
-    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
-    orp_data = {}
-    col1, col2 = st.columns(2)
-    with col1:
-        orp_data['control_number'] = st.text_input("Control Number", key="orp_control_number")
-        orp_data['expiration'] = st.date_input("Expiration Date", key="orp_expiration")
-    with col2:
-        orp_data['date_opened'] = st.date_input("Date Opened", key="orp_date_opened")
-        orp_data['initial'] = st.number_input("Initial Measurement (mV)", value=0.0, key="orp_initial")
-        orp_data['calibrated'] = st.number_input("Calibrated Measurement (mV)", value=0.0, key="orp_calibrated")
-    return orp_data
-
-
-def render_ec_calibration():
-    """Render EC probe calibration form"""
-    st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
-    ec_data = {}
-
-    for idx, label in enumerate(["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]):
-        st.markdown(
-            f'<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
-            f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>',
-            unsafe_allow_html=True,
-        )
-        col1, col2 = st.columns(2)
-        with col1:
-            ec_data[f"ec_{idx}_control"] = st.text_input(f"{label} Control Number", key=f"ec_{idx}_control_number")
-            ec_data[f"ec_{idx}_exp"] = st.date_input(f"{label} Expiration Date", key=f"ec_{idx}_expiration")
-        with col2:
-            ec_data[f"ec_{idx}_opened"] = st.date_input(f"{label} Date Opened", key=f"ec_{idx}_date_opened")
-            ec_data[f"ec_{idx}_initial"] = st.number_input(f"{label} Initial Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_initial")
-            ec_data[f"ec_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_calibrated")
-        st.markdown('</div>', unsafe_allow_html=True)
-    return ec_data
 
 
 def render_calibration_form(probe_type):
@@ -155,6 +86,30 @@ def registration_calibration_page():
 
     # Title
     st.markdown('<h1 style="font-family: Arial; color: #0071ba;">📋 Probe Registration & Calibration</h1>', unsafe_allow_html=True)
+
+    # Sidebar for Drive settings
+    with st.sidebar:
+        with st.expander("Google Drive Settings"):
+            if 'drive_folder_id' in st.session_state:
+                st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
+                if st.button("Test Folder Access"):
+                    drive_manager = st.session_state.get('drive_manager')
+                    if drive_manager and drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
+                        st.success("✅ Folder access verified!")
+                        st.session_state['last_drive_check'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        st.error("❌ Could not access folder. Check permissions.")
+            else:
+                st.warning("⚠️ Drive folder not configured.")
+
+        with st.expander("Debug Info"):
+            st.write({
+                "Drive Connected": 'drive_manager' in st.session_state,
+                "Drive Folder": st.session_state.get('drive_folder_id', 'Not set'),
+                "Records Count": len(st.session_state.inventory),
+                "Last Save": st.session_state.get('last_save_time', 'Never'),
+                "Last Drive Check": st.session_state.get('last_drive_check', 'Never')
+            })
 
     # Input Fields
     col1, col2 = st.columns(2)
@@ -200,6 +155,14 @@ def registration_calibration_page():
         success = add_new_probe(probe_data)
         if success:
             st.success(f"✅ Probe {serial_number} saved successfully!")
+            if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+                if st.session_state.drive_manager.save_to_drive(st.session_state.inventory, st.session_state.drive_folder_id):
+                    st.success("✅ Inventory saved to Google Drive.")
+                    st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    st.warning("⚠️ Failed to save to Google Drive. Data saved locally.")
+            else:
+                st.warning("⚠️ Google Drive not configured. Data saved locally.")
             time.sleep(1)  # Delay for user feedback
             st.rerun()
         else:
