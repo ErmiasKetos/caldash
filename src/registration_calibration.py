@@ -6,7 +6,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from dotenv import load_dotenv
-from app import DriveManager
+from src.drive_manager import DriveManager, save_inventory
 import os
 import time
 import threading
