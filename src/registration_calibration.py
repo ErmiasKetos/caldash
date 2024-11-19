@@ -183,7 +183,7 @@ if st.button("Save"):
             serial_number = get_next_serial_number(probe_type, manufacturing_date)
             if not serial_number:
                 st.error("Error generating serial number")
-                    return
+              return
 
             new_probe = {
                 "Serial Number": serial_number,
