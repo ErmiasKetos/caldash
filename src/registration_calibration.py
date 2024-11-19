@@ -318,4 +318,24 @@ def registration_calibration_page():
                     else:
                         st.warning("⚠️ Failed to save to Google Drive, but data is saved locally")
                 else:
-                    st.warning("
+                    st.warning("⚠️ Google Drive not accessible, data saved locally only")
+                
+                # Clear form fields after successful save
+                st.session_state['manufacturer'] = ""
+                st.session_state['manufacturer_part_number'] = ""
+                st.session_state['ketos_part_number'] = KETOS_PART_NUMBERS[probe_type][0]
+                
+                # Record the last successful save time
+                st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Rerun the app to refresh the form
+                st.rerun()
+            else:
+                st.error("❌ Failed to register probe")
+
+        except Exception as e:
+            logger.error(f"Error saving probe: {str(e)}")
+            st.error(f"Error saving probe: {str(e)}")
+
+if __name__ == "__main__":
+    registration_calibration_page()
