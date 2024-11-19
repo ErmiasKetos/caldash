@@ -54,6 +54,26 @@ def initialize_inventory():
         logger.error(f"Error initializing inventory: {str(e)}")
         st.error("Error initializing inventory. Please try refreshing the page.")
 
+def get_filtered_inventory(status_filter="All"):
+    """Get filtered inventory based on status"""
+    try:
+        if status_filter == "All":
+            return st.session_state.inventory
+        return st.session_state.inventory[st.session_state.inventory['Status'] == status_filter]
+    except Exception as e:
+        logger.error(f"Error filtering inventory: {str(e)}")
+        return pd.DataFrame()
+
+def style_inventory_dataframe(df):
+    """Apply color styling to inventory dataframe"""
+    try:
+        def color_rows(row):
+            return ['background-color: {}'.format(row['Status Color']) for _ in row]
+        return df.style.apply(color_rows, axis=1)
+    except Exception as e:
+        logger.error(f"Error styling dataframe: {str(e)}")
+        return df
+
 def save_inventory(inventory_df, version_control=True):
     """Save inventory with versioning"""
     try:
@@ -124,6 +144,31 @@ def get_next_serial_number(probe_type, manufacturing_date):
     except Exception as e:
         logger.error(f"Error generating serial number: {str(e)}")
         return None
+
+def add_new_probe(probe_data):
+    """Add a new probe to the inventory"""
+    try:
+        # Add metadata
+        probe_data['Entry Date'] = datetime.now().strftime('%Y-%m-%d')
+        probe_data['Last Modified'] = datetime.now().strftime('%Y-%m-%d')
+        probe_data['Change Date'] = datetime.now().strftime('%Y-%m-%d')
+        probe_data['Status'] = 'Instock'
+        probe_data['Status Color'] = STATUS_COLORS['Instock']
+        
+        # Create new row
+        new_row_df = pd.DataFrame([probe_data])
+        
+        # Append to inventory
+        st.session_state.inventory = pd.concat(
+            [st.session_state.inventory, new_row_df],
+            ignore_index=True
+        )
+        
+        # Save changes
+        return save_inventory(st.session_state.inventory)
+    except Exception as e:
+        logger.error(f"Error adding new probe: {str(e)}")
+        return False
 
 # Start periodic save thread
 def start_periodic_save():
