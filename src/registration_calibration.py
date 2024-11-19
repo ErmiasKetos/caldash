@@ -64,21 +64,25 @@ def registration_calibration_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Save Button
-    if st.button("Save"):
-        next_calibration = calibration_date + timedelta(days=365)  # Default 1 year
-        new_row = {
-            "Serial Number": serial_number,
-            "Type": probe_type,
-            "Manufacturer": manufacturer,
-            "KETOS P/N": ketos_part_number,
-            "Mfg P/N": manufacturer_part_number,
-            "Next Calibration": next_calibration.strftime("%Y-%m-%d"),
-            "Status": "Active",
-        }
-        # Append to session state and save
-        st.session_state["inventory"] = st.session_state["inventory"].append(new_row, ignore_index=True)
-        save_inventory(st.session_state["inventory"], get_file_path(), version_control=True)
-        st.success("New probe registered successfully!")
+if st.button("Save"):
+    next_calibration = calibration_date + timedelta(days=365)  # Default 1 year
+    new_row = {
+        "Serial Number": serial_number,
+        "Type": probe_type,
+        "Manufacturer": manufacturer,
+        "KETOS P/N": ketos_part_number,
+        "Mfg P/N": manufacturer_part_number,
+        "Next Calibration": next_calibration.strftime("%Y-%m-%d"),
+        "Status": "Active",
+    }
+    # Create a single-row DataFrame for the new entry
+    new_row_df = pd.DataFrame([new_row])
+
+    # Append the new row to the inventory
+    st.session_state["inventory"] = pd.concat([st.session_state["inventory"], new_row_df], ignore_index=True)
+    save_inventory(st.session_state["inventory"], get_file_path(), version_control=True)
+    st.success("New probe registered successfully!")
+
 
 # pH Calibration Rendering
 def render_ph_calibration():
