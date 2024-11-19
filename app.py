@@ -24,6 +24,50 @@ CLIENT_CONFIG = {
     }
 }
 
+class DriveManager:
+    """Manages Google Drive operations"""
+    def __init__(self):
+        self.service = None
+        self.credentials = None
+
+    def authenticate(self, credentials):
+        """Set up Google Drive service with provided credentials"""
+        try:
+            self.credentials = credentials
+            self.service = build('drive', 'v3', credentials=credentials)
+            return True
+        except Exception as e:
+            st.error(f"Drive authentication failed: {str(e)}")
+            return False
+
+    def save_to_drive(self, file_path, drive_folder_id):
+        """Save file to Google Drive in specified folder"""
+        try:
+            if not self.service:
+                return False
+                
+            file_metadata = {
+                'name': os.path.basename(file_path),
+                'parents': [drive_folder_id]
+            }
+            
+            media = MediaFileUpload(
+                file_path, 
+                mimetype='text/csv',
+                resumable=True
+            )
+            
+            file = self.service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+            
+            return True
+        except Exception as e:
+            st.error(f"Failed to save to Drive: {str(e)}")
+            return False
+
 def check_user_auth():
     if 'credentials' not in st.session_state:
         try:
@@ -37,7 +81,6 @@ def check_user_auth():
                 include_granted_scopes='true',
                 prompt='consent'
             )
-            # Store the state in session for verification
             st.session_state['oauth_state'] = state
             st.markdown(f"[Login with Google]({authorization_url})")
             return False
@@ -58,7 +101,9 @@ def init_google_auth():
             )
             flow.fetch_token(code=params['code'][0])
             st.session_state['credentials'] = flow.credentials
-            # Clear the URL parameters
+            # Initialize Drive manager with new credentials
+            if 'drive_manager' in st.session_state:
+                st.session_state.drive_manager.authenticate(flow.credentials)
             st.experimental_set_query_params()
             return True
         except Exception as e:
@@ -67,6 +112,30 @@ def init_google_auth():
                 del st.session_state['credentials']
             return False
     return False
+
+def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
+    """Save inventory to local file and Google Drive"""
+    try:
+        # Save locally
+        inventory.to_csv(file_path, index=False)
+        
+        # Create backup with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        backup_path = f"{os.path.splitext(file_path)[0]}_{timestamp}.csv"
+        inventory.to_csv(backup_path, index=False)
+        
+        # Save to Drive if available
+        if drive_manager and drive_manager.service:
+            drive_manager.save_to_drive(file_path, drive_folder_id)
+            
+    except Exception as e:
+        st.error(f"Failed to save inventory: {str(e)}")
+
+def periodic_save(inventory, file_path, drive_manager, drive_folder_id):
+    """Periodically save inventory"""
+    while True:
+        time.sleep(600)  # 10 minutes
+        save_inventory(inventory, file_path, drive_manager, drive_folder_id)
 
 def main():
     st.sidebar.title("CalMS")
