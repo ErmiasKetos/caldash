@@ -18,6 +18,9 @@ service_life = {
     "EC Probe": 10,
 }
 
+# Styling for icons
+icon_style = '<i class="fas fa-microchip" style="color: #0071ba;"></i>'
+
 
 def registration_calibration_page():
     # Initialize inventory in session state
@@ -34,10 +37,14 @@ def registration_calibration_page():
             ]
         )
 
-    st.title("Probe Registration & Calibration")
+    # Title with icon
+    st.markdown(
+        f'<h1 style="font-family: Arial, sans-serif; font-size: 32px; color: #0071ba;">{icon_style} Probe Registration & Calibration</h1>',
+        unsafe_allow_html=True,
+    )
 
     # General Section: Probe Information
-    st.subheader("Probe Information")
+    st.markdown('<h2 style="font-family: Arial; color: #333;">Probe Information</h2>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         manufacturer = st.text_input("Manufacturer")
@@ -54,10 +61,13 @@ def registration_calibration_page():
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
     expire_yymm = expire_date.strftime("%y%m")
     serial_number = f"{probe_type.split()[0]}_{expire_yymm}_{len(st.session_state['inventory']) + 1:05d}"
-    st.text(f"Generated Serial Number: {serial_number}")
+    st.markdown(
+        f'<p style="font-family: Arial; font-size: 16px; color: #0071ba;"><b>Generated Serial Number:</b> {serial_number}</p>',
+        unsafe_allow_html=True,
+    )
 
     # Calibration Details Section
-    st.subheader("Calibration Details")
+    st.markdown('<h2 style="font-family: Arial; color: #333;">Calibration Details</h2>', unsafe_allow_html=True)
     if probe_type == "pH Probe":
         render_ph_calibration()
     elif probe_type == "DO Probe":
@@ -84,11 +94,15 @@ def registration_calibration_page():
 
 
 def render_ph_calibration():
-    st.subheader("pH Calibration")
+    st.markdown('<h3 style="font-family: Arial; color: #333;">pH Calibration</h3>', unsafe_allow_html=True)
     for buffer_label in ["pH 4", "pH 7", "pH 10"]:
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown(f"### {buffer_label} Buffer")
+            st.markdown(
+                f'<div style="border: 1px solid #ccc; padding: 15px; border-radius: 8px; background-color: #f8f8ff;">'
+                f'<b>{buffer_label} Buffer</b>',
+                unsafe_allow_html=True,
+            )
             st.text_input(f"{buffer_label} Control Number")
             st.date_input(f"{buffer_label} Expiration Date")
         with col2:
@@ -99,7 +113,7 @@ def render_ph_calibration():
 
 
 def render_do_calibration():
-    st.subheader("DO Calibration")
+    st.markdown('<h3 style="font-family: Arial; color: #333;">DO Calibration</h3>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         st.text_input("0% DO Control Number")
@@ -113,7 +127,7 @@ def render_do_calibration():
 
 
 def render_orp_calibration():
-    st.subheader("ORP Calibration")
+    st.markdown('<h3 style="font-family: Arial; color: #333;">ORP Calibration</h3>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         st.text_input("240 mV Control Number")
@@ -125,11 +139,15 @@ def render_orp_calibration():
 
 
 def render_ec_calibration():
-    st.subheader("Specific Conductance (EC) Calibration")
+    st.markdown('<h3 style="font-family: Arial; color: #333;">Specific Conductance (EC) Calibration</h3>', unsafe_allow_html=True)
     for label in ["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]:
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown(f"### {label} Calibration")
+            st.markdown(
+                f'<div style="border: 1px solid #ccc; padding: 15px; border-radius: 8px; background-color: #e8f8e8;">'
+                f'<b>{label} Calibration</b>',
+                unsafe_allow_html=True,
+            )
             st.text_input(f"{label} Control Number")
             st.date_input(f"{label} Expiration Date")
         with col2:
