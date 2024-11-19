@@ -112,7 +112,7 @@ def render_ph_calibration():
             st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
-=========
+
 
 
 def render_do_calibration():
@@ -153,7 +153,7 @@ def render_do_calibration():
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
-==========
+
 
 
 def render_orp_calibration():
