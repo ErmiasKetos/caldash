@@ -62,7 +62,7 @@ def check_user_auth():
     return True
 
 def init_google_auth():
-    """Initialize Google authentication"""
+    """Initialize Google authentication."""
     try:
         params = st.experimental_get_query_params()
         if 'code' not in params:
@@ -71,14 +71,36 @@ def init_google_auth():
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
-            state=st.session_state.get('oauth_state'),
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
+
         flow.fetch_token(code=params['code'][0])
         st.session_state['credentials'] = flow.credentials
+
+        # Initialize Drive manager with new credentials
+        if 'drive_manager' not in st.session_state:
+            st.session_state.drive_manager = DriveManager()
+
+        st.session_state.drive_manager.authenticate(flow.credentials)
+
+        # Verify folder access (optional for Drive integration)
+        if 'drive_folder_id' not in st.session_state:
+            st.session_state['drive_folder_id'] = DRIVE_FOLDER_ID
+
+        if st.session_state.drive_manager.verify_folder_access(DRIVE_FOLDER_ID):
+            logger.info(f"Drive folder access verified for folder ID: {DRIVE_FOLDER_ID}")
+        else:
+            st.warning("⚠️ Drive folder access verification failed. Check permissions.")
+
+        # Clear query params to prevent re-execution
         st.experimental_set_query_params()
-        logger.info("Google authentication initialized successfully")
+
+        # Set the user as authenticated
+        st.session_state['authenticated'] = True
+
+        logger.info("Google authentication successfully initialized.")
         return True
+
     except Exception as e:
         logger.error(f"Authentication failed: {str(e)}")
         st.error(f"Authentication failed: {str(e)}")
