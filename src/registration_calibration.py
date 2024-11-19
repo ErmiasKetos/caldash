@@ -63,8 +63,13 @@ def registration_calibration_page():
     )
 
     # Calibration Details - Big Card
-    st.markdown('<div style="border: 2px solid #0071ba; padding: 20px; border-radius: 12px;">', unsafe_allow_html=True)
-    st.markdown('<h2 style="font-family: Arial; color: #0071ba;">Calibration Details</h2>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="border: 2px solid #0071ba; padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h2 style="font-family: Arial; color: #0071ba; text-align: center;">Calibration Details</h2>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Render Calibration Details Based on Probe Type
     if probe_type == "pH Probe":
