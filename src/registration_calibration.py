@@ -111,19 +111,42 @@ def load_inventory_from_drive():
         drive_manager = st.session_state.get("drive_manager")
         folder_id = st.session_state.get("drive_folder_id")
 
-        if drive_manager and folder_id:
-            file_content = drive_manager.download_inventory_csv(folder_id)
-            inventory_df = pd.read_csv(file_content)
-            st.session_state.inventory = inventory_df
-            return True
-        else:
-            st.warning("⚠️ Google Drive is not configured. Cannot fetch the inventory.")
+        if not drive_manager:
+            st.error("❌ Drive Manager is not initialized. Please check your Google Drive setup.")
             return False
-    except Exception as e:
-        logger.error(f"Error loading inventory from Google Drive: {e}")
-        st.error("❌ Failed to load inventory. Please check your Google Drive settings.")
+
+        if not folder_id:
+            st.error("❌ Google Drive folder ID is not set. Please configure your settings.")
+            return False
+
+        # Attempt to download the inventory file
+        st.info("📂 Attempting to load the inventory CSV from Google Drive...")
+        file_content = drive_manager.download_inventory_csv(folder_id)
+
+        # If file_content is None or empty, raise an error
+        if not file_content:
+            st.error("❌ Inventory file not found in the specified Google Drive folder.")
+            return False
+
+        # Parse the CSV content
+        inventory_df = pd.read_csv(file_content)
+        st.session_state.inventory = inventory_df
+        return True
+
+    except pd.errors.EmptyDataError:
+        st.error("❌ The inventory CSV file is empty. Please upload a valid file.")
+        logger.error("Empty CSV file encountered during inventory load.")
         return False
 
+    except FileNotFoundError:
+        st.error("❌ Inventory CSV file not found in the specified Google Drive folder.")
+        logger.error("Inventory CSV file not found.")
+        return False
+
+    except Exception as e:
+        logger.error(f"Error loading inventory from Google Drive: {e}")
+        st.error(f"❌ Failed to load inventory. Error: {e}")
+        return False
 
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
