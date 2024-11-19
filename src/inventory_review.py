@@ -7,7 +7,8 @@ from .inventory_manager import (
     get_filtered_inventory,
     style_inventory_dataframe,
     update_probe_status,
-    save_inventory
+    save_inventory,
+    STATUS_COLORS
 )
 
 def inventory_review_page():
@@ -39,6 +40,7 @@ def inventory_review_page():
     # Status update section
     if not st.session_state.inventory.empty:
         st.markdown("### Update Probe Status")
+        
         col1, col2 = st.columns(2)
         
         with col1:
@@ -46,6 +48,12 @@ def inventory_review_page():
                 "Select Probe",
                 st.session_state.inventory['Serial Number'].tolist()
             )
+            
+            if selected_probe:
+                probe_info = st.session_state.inventory[
+                    st.session_state.inventory['Serial Number'] == selected_probe
+                ].iloc[0]
+                st.info(f"Current Status: {probe_info['Status']}")
         
         with col2:
             current_status = st.session_state.inventory[
@@ -57,29 +65,34 @@ def inventory_review_page():
                 ["Instock", "Shipped", "Scraped"],
                 index=["Instock", "Shipped", "Scraped"].index(current_status)
             )
-            # Show color indicator for selected status
-            st.markdown(
-                        f'<div style="background-color: {STATUS_COLORS[new_status]}; '
-                        f'padding: 10px; border-radius: 5px; margin-top: 10px;">'
-                        f'Selected status color preview</div>',
-                        unsafe_allow_html=True
-                    )
-    # Update button with confirmation
-    if st.button("Update Status"):
-        with st.expander("Confirm Status Change", expanded=True):
-            st.write(f"Current Status: {current_status}")
-            st.write(f"New Status: {new_status}")
             
-            if st.button("Confirm"):
-                if update_probe_status(selected_probe, new_status):
-                    st.success(f"✅ Updated status of {selected_probe} to {new_status}")
-                    st.rerun()
-                else:
-                        st.error("❌ Failed to update status")
-                
-    # Download button
+            # Preview color for selected status
+            st.markdown(
+                f'<div style="background-color: {STATUS_COLORS[new_status]}; '
+                f'padding: 10px; border-radius: 5px; margin-top: 10px;">'
+                f'Selected status color preview</div>',
+                unsafe_allow_html=True
+            )
+        
+        # Update button with confirmation
+        if st.button("Update Status"):
+            if new_status != current_status:
+                confirm = st.button("Confirm Change", key="confirm_status")
+                if confirm:
+                    with st.spinner("Updating status..."):
+                        if update_probe_status(selected_probe, new_status):
+                            st.success(f"✅ Updated status of {selected_probe} to {new_status}")
+                            # Rerun to refresh the page
+                            st.rerun()
+                        else:
+                            st.error("Failed to update status")
+            else:
+                st.warning("No status change selected")
+
+    # Download section
     st.markdown("### Download Inventory")
     col1, col2 = st.columns(2)
+    
     with col1:
         # Download filtered inventory
         csv = filtered_inventory.to_csv(index=False).encode("utf-8")
@@ -89,7 +102,7 @@ def inventory_review_page():
             file_name=f"inventory_filtered_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
         )
-
+    
     with col2:
         # Download full inventory
         full_csv = st.session_state.inventory.to_csv(index=False).encode("utf-8")
@@ -99,7 +112,6 @@ def inventory_review_page():
             file_name=f"inventory_full_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
         )
-
 
     # Debug information
     with st.expander("Debug Info", expanded=False):
