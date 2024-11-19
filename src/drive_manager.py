@@ -15,10 +15,10 @@ INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
 BACKUP_FOLDER_ID = "19lHngxB_RXEpr30jpY9_fCaSpl6Z1m1i"
 
 class DriveManager:
+    """Manages Google Drive operations"""
     def __init__(self):
         self.service = None
         self.credentials = None
-        self.last_backup_date = None
 
     def authenticate(self, credentials):
         """Set up Google Drive service with provided credentials"""
@@ -38,15 +38,15 @@ class DriveManager:
             if not self.service:
                 logger.error("Drive service not initialized")
                 return False
-            
+
             folder = self.service.files().get(
                 fileId=folder_id,
                 fields="id, name, permissions"
             ).execute()
-            
+
             logger.info(f"Successfully verified access to folder: {folder.get('name', 'Unknown')}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to verify folder access: {str(e)}")
             return False
@@ -61,7 +61,7 @@ class DriveManager:
             if not self.service:
                 logger.error("Drive service not initialized")
                 return False
-                
+
             # Verify folder access first
             if not self.verify_folder_access(drive_folder_id):
                 logger.error(f"Cannot access folder: {drive_folder_id}")
@@ -72,22 +72,22 @@ class DriveManager:
                 'parents': [drive_folder_id],
                 'mimeType': 'text/csv'
             }
-            
+
             media = MediaFileUpload(
-                file_path, 
+                file_path,
                 mimetype='text/csv',
                 resumable=True
             )
-            
+
             file = self.service.files().create(
                 body=file_metadata,
                 media_body=media,
                 fields='id, name'
             ).execute()
-            
+
             logger.info(f"File saved to Drive successfully: {file.get('name')} ({file.get('id')})")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to save to Drive: {str(e)}")
             return False
