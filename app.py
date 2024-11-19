@@ -96,25 +96,30 @@ def main():
     st.sidebar.title("CalMS")
     
     # Handle OAuth 2.0 callback
-if 'code' in st.experimental_get_query_params():
-    try:
+    if 'code' in st.experimental_get_query_params():
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
         flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
-        credentials = flow.credentials
-        st.session_state.credentials = Credentials(
-            token=credentials.token,
-            refresh_token=credentials.refresh_token,
-            token_uri=CLIENT_CONFIG['web']['token_uri'],
-            client_id=CLIENT_CONFIG['web']['client_id'],
-            client_secret=CLIENT_CONFIG['web']['client_secret']
-        )
-        # Clear 'code' from URL to avoid re-fetching token
-        st.experimental_set_query_params()
+        st.session_state['credentials'] = flow.credentials
         st.experimental_rerun()
-    except Exception as e:
-        st.error(f"Error during token exchange: {e}")
 
+    if not check_user_auth():
+        st.write("Please log in to access the application.")
+        return
+
+    # Get user info
+    user_info_service = build('oauth2', 'v2', credentials=st.session_state['credentials'])
+    user_info = user_info_service.userinfo().get().execute()
+    
+    if not user_info['email'].endswith('@ketos.co'):
+        st.error("Access denied. Please use your @ketos.co email to log in.")
+        if st.button("Logout"):
+            st.session_state.pop('credentials', None)
+            st.experimental_rerun()
+        return
+
+    st.sidebar.text(f"Logged in as: {user_info['name']}")
+    if 
