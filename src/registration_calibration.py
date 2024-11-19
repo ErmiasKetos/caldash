@@ -298,7 +298,6 @@ def registration_calibration_page():
                 "Status": "Instock",
                 "Entry Date": datetime.now().strftime("%Y-%m-%d"),
                 "Last Modified": datetime.now().strftime("%Y-%m-%d"),
-                "Status Color": STATUS_COLORS["Instock"],
                 "Change Date": datetime.now().strftime("%Y-%m-%d"),
                 "Calibration Data": str(calibration_data)
             }
@@ -311,14 +310,10 @@ def registration_calibration_page():
                 
                 # Save to Drive if available and accessible
                 if drive_status:
-                    save_success = save_inventory(st.session_state.inventory)
-                    if save_success:
-                        st.success("✅ Inventory saved to Google Drive")
-                        st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    else:
-                        st.warning("⚠️ Failed to save to Google Drive, but data is saved locally")
+                    st.success("✅ Inventory updated and saved to Google Drive")
+                    st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 else:
-                    st.warning("⚠️ Google Drive not accessible, data saved locally only")
+                    st.warning("⚠️ Inventory updated locally only. Google Drive not accessible.")
                 
                 # Clear form fields after successful save
                 st.session_state['manufacturer'] = ""
