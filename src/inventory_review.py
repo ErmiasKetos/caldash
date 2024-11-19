@@ -6,6 +6,12 @@ from datetime import datetime
 from threading import Thread
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from src.inventory_manager import (
+    initialize_inventory,
+    get_filtered_inventory,
+    style_inventory_dataframe,
+    update_probe_status
+)
 
 # Google Drive Authentication
 def authenticate_google_drive():
