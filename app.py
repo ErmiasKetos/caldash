@@ -55,8 +55,7 @@ def save_inventory(inventory, file_path, drive_manager, drive_folder_id):
         drive_manager.save_to_drive(file_path, drive_folder_id)
 
 def check_user_auth():
-        if 'credentials' in st.session_state and st.session_state['credentials'].valid:
-        return True
+        if 'credentials' in st.session_state and st.session_state['credentials'].valid: return True
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
@@ -97,19 +96,32 @@ def main():
     st.sidebar.title("CalMS")
     
     # Handle OAuth 2.0 callback
-    if 'code' in st.experimental_get_query_params():
+params = st.experimental_get_query_params()
+    if 'code' in params:
         flow = Flow.from_client_config(
             client_config=CLIENT_CONFIG,
             scopes=SCOPES,
             redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
         )
-        flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
-        st.session_state['credentials'] = flow.credentials
-        st.experimental_rerun()
+        try:
+            flow.fetch_token(code=params['code'][0])
+            st.session_state['credentials'] = flow.credentials
+            # Clear query parameters after successful auth
+            st.experimental_set_query_params()
+            return True
+        except Exception as e:
+            st.error(f"Authentication failed: {str(e)}")
+            return False
 
-    if not check_user_auth():
-        st.write("Please log in to access the application.")
-        return
+    # If not authenticated, show login button
+    flow = Flow.from_client_config(
+        client_config=CLIENT_CONFIG,
+        scopes=SCOPES,
+        redirect_uri="https://caldash-eoewkytd6u7jyxfm2haaxn.streamlit.app/"
+    )
+    authorization_url, _ = flow.authorization_url(prompt="consent")
+    st.markdown(f"[Login with Google]({authorization_url})")
+    return False
 
     # Get user info
     user_info_service = build('oauth2', 'v2', credentials=st.session_state['credentials'])
