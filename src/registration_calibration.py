@@ -6,11 +6,16 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from dotenv import load_dotenv
+from app import DriveManager
 load_dotenv()
 import os
 import time
 import threading
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # OAuth 2.0 configuration
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
