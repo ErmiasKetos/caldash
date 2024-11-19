@@ -29,6 +29,12 @@ SERVICE_LIFE = {
     "DO Probe": 4,
     "EC Probe": 10,
 }
+# Add Status Colors definition
+STATUS_COLORS = {
+    'Instock': '#90EE90',  # Green
+    'Shipped': '#ADD8E6',  # Light Blue
+    'Scraped': '#FFB6C6'   # Red
+}
 
 def render_ph_calibration():
     """Render pH probe calibration form"""
