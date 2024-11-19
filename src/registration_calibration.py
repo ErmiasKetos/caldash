@@ -352,5 +352,5 @@ def registration_calibration_page():
         logger.error(f"Error saving probe: {str(e)}")
         st.error(f"Error saving probe: {str(e)}")
 
-    if __name__ == "__main__":
-        registration_calibration_page()
+if __name__ == "__main__":
+    registration_calibration_page()
