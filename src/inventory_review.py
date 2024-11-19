@@ -1,37 +1,24 @@
 import streamlit as st
 import pandas as pd
 
+def inventory_review():
+    st.title("Inventory Review")
 
-def inventory_review_page():
-    # Initialize inventory in session state
+    # Load inventory
+    file_name = "inventory.csv"
     if "inventory" not in st.session_state:
-        st.session_state["inventory"] = pd.DataFrame(
-            columns=[
-                "Serial Number",
-                "Type",
-                "Manufacturer",
-                "KETOS P/N",
-                "Mfg P/N",
-                "Next Calibration",
-                "Status",
-            ]
-        )
+        if os.path.exists(file_name):
+            st.session_state["inventory"] = pd.read_csv(file_name)
+        else:
+            st.session_state["inventory"] = pd.DataFrame(
+                columns=["Serial Number", "Type", "Manufacturer", "KETOS P/N", "Mfg P/N", "Next Calibration", "Status"]
+            )
 
-    st.markdown(
-        '<h1 style="font-family: Arial, sans-serif; font-size: 32px; color: #0071ba;">📋 Inventory Review</h1>',
-        unsafe_allow_html=True,
-    )
+    # Display Inventory
+    st.write("Current Inventory:")
+    st.dataframe(st.session_state["inventory"])
 
-    # Load inventory data from session state
-    inventory_data = st.session_state["inventory"]
-
-    # Display inventory table
-    st.dataframe(inventory_data)
-
-    # Option to download inventory as CSV
-    st.download_button(
-        "Download Inventory as CSV",
-        data=inventory_data.to_csv(index=False),
-        file_name="inventory.csv",
-        mime="text/csv",
-    )
+    # Export as CSV
+    if st.button("Export to CSV"):
+        st.session_state["inventory"].to_csv(file_name, index=False)
+        st.success(f"Inventory exported as {file_name}")
