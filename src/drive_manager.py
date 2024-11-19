@@ -1,7 +1,7 @@
 import streamlit as st
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 import pandas as pd
 import io
@@ -187,3 +187,22 @@ class DriveManager:
         except Exception as e:
             logger.error(f"Failed to create backup: {str(e)}")
             return False
+
+    def download_inventory_csv(self, folder_id, file_name="wbpms_inventory_2024.csv"):
+        """Download a CSV file from Google Drive."""
+        try:
+            file_id = self.get_file_id(folder_id, file_name)
+            if not file_id:
+                raise FileNotFoundError(f"File '{file_name}' not found in folder '{folder_id}'.")
+
+            request = self.service.files().get_media(fileId=file_id)
+            file_content = io.BytesIO()
+            downloader = MediaIoBaseDownload(file_content, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+            file_content.seek(0)  # Reset the stream to the beginning
+            return file_content
+        except HttpError as error:
+            logger.error(f"An error occurred while downloading the file: {error}")
+            raise error
