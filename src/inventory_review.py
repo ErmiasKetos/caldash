@@ -199,34 +199,37 @@ def inventory_review_page():
         })
 
 def display_calibration_details(probe_data):
-    """Display detailed calibration information in the inventory review."""
+"""Display detailed calibration information in the inventory review."""
+try:
     if 'Calibration Data' in probe_data and probe_data['Calibration Data']:
-        try:
-            calibration_data = json.loads(probe_data['Calibration Data'])
-            
-            st.markdown("#### Calibration Details")
-            
-            if 'calibration_date' in calibration_data:
-                st.write(f"**Calibration Date:** {calibration_data['calibration_date']}")
-            
-            # Display pH calibration data if present
-            if probe_data['Type'] == "pH Probe":
-                for buffer_label in ["pH 4", "pH 7", "pH 10"]:
-                    if any(f"{buffer_label}" in key for key in calibration_data.keys()):
-                        st.markdown(f"##### {buffer_label} Buffer Data")
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.write(f"Control Number: {calibration_data.get(f'{buffer_label}_control', 'N/A')}")
-                            st.write(f"Expiration Date: {calibration_data.get(f'{buffer_label}_exp', 'N/A')}")
-                            st.write(f"Date Opened: {calibration_data.get(f'{buffer_label}_opened', 'N/A')}")
-                        
-                        with col2:
-                            st.write("pH Measurements:")
-                            st.write(f"- Initial: {calibration_data.get(f'{buffer_label}_initial', 'N/A')} pH")
-                            st.write(f"- Calibrated: {calibration_data.get(f'{buffer_label}_calibrated', 'N/A')} pH")
-                            st.write("mV Measurements:")
-                            st.write(f"- Initial: {calibration_data.get(f'{buffer_label}_initial_mv', 'N/A')} mV")
-                            st.write(f"- Calibrated: {calibration_data.get(f'{buffer_label}_calibrated_mv', 'N/A')} mV")
+        calibration_data = json.loads(probe_data['Calibration Data'])
+        
+        st.markdown("#### Calibration Details")
+        
+        if 'calibration_date' in calibration_data:
+            st.write(f"**Calibration Date:** {calibration_data['calibration_date']}")
+        
+        # Display pH calibration data if present
+        if probe_data['Type'] == "pH Probe":
+            for buffer_label in ["pH 4", "pH 7", "pH 10"]:
+                if any(f"{buffer_label}" in key for key in calibration_data.keys()):
+                    st.markdown(f"##### {buffer_label} Buffer Data")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write(f"Control Number: {calibration_data.get(f'{buffer_label}_control', 'N/A')}")
+                        st.write(f"Expiration Date: {calibration_data.get(f'{buffer_label}_exp', 'N/A')}")
+                        st.write(f"Date Opened: {calibration_data.get(f'{buffer_label}_opened', 'N/A')}")
+                    
+                    with col2:
+                        st.write("pH Measurements:")
+                        st.write(f"- Initial: {calibration_data.get(f'{buffer_label}_initial', 'N/A')} pH")
+                        st.write(f"- Calibrated: {calibration_data.get(f'{buffer_label}_calibrated', 'N/A')} pH")
+                        st.write("mV Measurements:")
+                        st.write(f"- Initial: {calibration_data.get(f'{buffer_label}_initial_mv', 'N/A')} mV")
+                        st.write(f"- Calibrated: {calibration_data.get(f'{buffer_label}_calibrated_mv', 'N/A')} mV")
+except Exception as e:
+    st.error(f"Error displaying calibration details: {str(e)}")
+    logger.error(f"Error in display_calibration_details: {str(e)}")
 
 
