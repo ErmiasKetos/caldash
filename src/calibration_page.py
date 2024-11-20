@@ -12,6 +12,16 @@ from .inventory_manager import save_inventory, STATUS_COLORS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def convert_dates_to_strings(data):
+    """Convert all date objects in calibration data to string format."""
+    converted_data = {}
+    for key, value in data.items():
+        if isinstance(value, datetime.date):
+            converted_data[key] = value.strftime("%Y-%m-%d")
+        else:
+            converted_data[key] = value
+    return converted_data
+
 def get_searchable_probes():
     """Get list of searchable probes with their details for autocomplete"""
     if 'inventory' not in st.session_state:
