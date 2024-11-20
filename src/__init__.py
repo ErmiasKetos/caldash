@@ -1,4 +1,5 @@
-from .registration_calibration import registration_calibration_page
+from src.registration_page import registration_page
+from src.calibration_page import calibration_page
 from .inventory_review import inventory_review_page
 from .inventory_manager import initialize_inventory
 from .drive_manager import DriveManager
