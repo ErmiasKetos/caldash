@@ -194,7 +194,7 @@ def registration_calibration_page():
         <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px;">
             Generated Serial Number: 
             <span id="serial-number" style="font-weight: bold; cursor: pointer; color: blue;"
-                  onclick="window.print()">{serial_number}</span>
+                  onclick="printSerialNumber()">{serial_number}</span>
         </div>
         <script>
             const printSerialNumber = () => {{
@@ -206,9 +206,9 @@ def registration_calibration_page():
                 printWindow.document.close();
                 printWindow.print();
             }};
-            document.getElementById('serial-number').addEventListener('click', printSerialNumber);
         </script>
     """, unsafe_allow_html=True)
+
 
     # Render Calibration Form
     calibration_data = render_calibration_form(probe_type)
