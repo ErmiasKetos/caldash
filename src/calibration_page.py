@@ -162,10 +162,12 @@ def render_ph_calibration():
         with col1:
             ph_data[f"{buffer_label}_control"] = st.text_input(f"{buffer_label} Control Number", key=f"ph_{idx}_control_number")
             ph_data[f"{buffer_label}_exp"] = st.date_input(f"{buffer_label} Expiration Date", key=f"ph_{idx}_expiration")
-        with col2:
             ph_data[f"{buffer_label}_opened"] = st.date_input(f"{buffer_label} Date Opened", key=f"ph_{idx}_date_opened")
+        with col2:
+            
             ph_data[f"{buffer_label}_initial"] = st.number_input(f"{buffer_label} Initial Measurement (pH)", value=0.0, key=f"ph_{idx}_initial")
             ph_data[f"{buffer_label}_calibrated"] = st.number_input(f"{buffer_label} Calibrated Measurement (pH)", value=0.0, key=f"ph_{idx}_calibrated")
+            ph_data[f"{buffer_label}_initial_mv"] = st.number_input(f"{buffer_label} Initial mV", value=0.0, key=f"ph_{idx}_initial_mv")
         st.markdown('</div>', unsafe_allow_html=True)
     return ph_data
 
