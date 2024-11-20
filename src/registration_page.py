@@ -188,7 +188,7 @@ if st.button("Save Probe"):
 
 
 if __name__ == "__main__":
-registration_calibration_page()
+  registration_calibration_page()
 
 def load_inventory_from_drive():
 """Load the inventory CSV from Google Drive into the app's session state."""
