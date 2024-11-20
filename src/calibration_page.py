@@ -152,7 +152,7 @@ def render_ph_calibration():
     """Render pH probe calibration form."""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
     ph_data = {}
-    for idx, (buffer_label, color) in enumerate([("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
+    for idx, (buffer_label, color) in enumerate([("pH 7", "#f8f1f1"), ("pH 4", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
         st.markdown(
             f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
             f'<h4 style="font-family: Arial; color: #333;">{buffer_label} Buffer</h4>',
