@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
+import json
 from datetime import datetime
 from .inventory_manager import (
     initialize_inventory,
@@ -95,6 +96,11 @@ def inventory_review_page():
                 st.write(f"Current Status: {probe_info['Status']}")
                 if 'Next Calibration' in probe_info:
                     st.write(f"Next Calibration: {probe_info['Next Calibration']}")
+                    
+                # Add calibration details display
+                if probe_info['Type'] == "pH Probe":
+                    with st.expander("View Calibration Details"):
+                        display_calibration_details(probe_info)
         
         with col2:
             if selected_probe and selected_probe != "No matches found":
@@ -182,6 +188,16 @@ def inventory_review_page():
             mime="text/csv",
         )
 
+    # Debug information
+    with st.expander("Debug Info", expanded=False):
+        st.write({
+            "Total Records": len(st.session_state.inventory),
+            "Filtered Records": len(filtered_inventory),
+            "Last Save": st.session_state.get('last_save_time', 'Never'),
+            "Drive Status": 'drive_manager' in st.session_state,
+            "Status Distribution": dict(st.session_state.inventory['Status'].value_counts())
+        })
+
 def display_calibration_details(probe_data):
     """Display detailed calibration information in the inventory review."""
     if 'Calibration Data' in probe_data and probe_data['Calibration Data']:
@@ -212,16 +228,5 @@ def display_calibration_details(probe_data):
                             st.write("mV Measurements:")
                             st.write(f"- Initial: {calibration_data.get(f'{buffer_label}_initial_mv', 'N/A')} mV")
                             st.write(f"- Calibrated: {calibration_data.get(f'{buffer_label}_calibrated_mv', 'N/A')} mV")
-
-
-    # Debug information
-    with st.expander("Debug Info", expanded=False):
-        st.write({
-            "Total Records": len(st.session_state.inventory),
-            "Filtered Records": len(filtered_inventory),
-            "Last Save": st.session_state.get('last_save_time', 'Never'),
-            "Drive Status": 'drive_manager' in st.session_state,
-            "Status Distribution": dict(st.session_state.inventory['Status'].value_counts())
-        })
 
 
