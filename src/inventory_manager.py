@@ -116,7 +116,6 @@ def save_inventory(inventory_df, version_control=True):
     except Exception as e:
         logger.error(f"Error saving inventory: {str(e)}")
         return False
-
 def update_probe_status(serial_number, new_status):
     """Update probe status and metadata"""
     try:
@@ -126,12 +125,24 @@ def update_probe_status(serial_number, new_status):
             st.session_state.inventory.loc[mask, 'Change Date'] = datetime.now().strftime('%Y-%m-%d')
             st.session_state.inventory.loc[mask, 'Last Modified'] = datetime.now().strftime('%Y-%m-%d')
             
-            # Save changes
-            return save_inventory(st.session_state.inventory)
+            # Save changes immediately to CSV and Drive
+            save_success = save_inventory(st.session_state.inventory)
+            
+            # Save to Google Drive if configured
+            if save_success and 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+                drive_success = st.session_state.drive_manager.save_to_drive(
+                    st.session_state.inventory,
+                    st.session_state.get('drive_folder_id')
+                )
+                if drive_success:
+                    st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                return drive_success
+            return save_success
         return False
     except Exception as e:
         logger.error(f"Error updating status: {str(e)}")
         return False
+        
 
 def get_next_serial_number(probe_type, manufacturing_date):
     """Generate sequential serial number"""
