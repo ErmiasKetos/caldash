@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import logging
 import time
 import json
+from .inventory_manager import BACKUP_FOLDER_ID
 from .drive_manager import DriveManager
 from .inventory_manager import save_inventory, STATUS_COLORS
 
@@ -264,8 +265,23 @@ def update_probe_calibration(serial_number, calibration_data):
         inventory_df.at[probe_idx, 'Next Calibration'] = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
         inventory_df.at[probe_idx, 'Status'] = "Calibrated"  # Update status to Calibrated
         
+        # Update the session state inventory
         st.session_state.inventory = inventory_df
-        return True
+        
+        # Save to both local CSV and Google Drive
+        save_success = save_inventory(st.session_state.inventory)
+        
+        # Save to Google Drive if configured
+        if save_success and 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+            drive_success = st.session_state.drive_manager.save_to_drive(
+                st.session_state.inventory,
+                st.session_state.get('drive_folder_id', BACKUP_FOLDER_ID)
+            )
+            if drive_success:
+                st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            return drive_success
+        return save_success
+
     except Exception as e:
         logger.error(f"Failed to update probe calibration: {str(e)}")
         return False
@@ -334,30 +350,27 @@ def calibration_page():
             
             # Render calibration form based on probe type
             calibration_data = render_calibration_form(probe['Type'])
-            
+        
             # Save calibration data
             if st.button("Save Calibration"):
-                calibration_data['calibration_date'] = calibration_date.strftime("%Y-%m-%d")
-                success = update_probe_calibration(selected_serial, calibration_data)
-                
-                if success:
-                    st.success(f"✅ Calibration data saved successfully for probe {selected_serial}!")
+                with st.spinner("Saving calibration data..."):
+                    calibration_data['calibration_date'] = calibration_date.strftime("%Y-%m-%d")
+                    success = update_probe_calibration(selected_serial, calibration_data)
                     
-                    # Save to Google Drive if configured
-                    if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
-                        if st.session_state.drive_manager.save_to_drive(st.session_state.inventory, st.session_state.drive_folder_id):
-                            st.success("✅ Inventory updated in Google Drive.")
-                            st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    if success:
+                        st.success(f"✅ Calibration data saved successfully for probe {selected_serial}!")
+                        
+                        # Show save status
+                        if 'drive_manager' in st.session_state:
+                            st.success("✅ Inventory updated in Google Drive")
+                            st.success(f"Last saved: {st.session_state.get('last_save_time', 'Unknown')}")
                         else:
-                            st.warning("⚠️ Failed to save to Google Drive. Data saved locally.")
+                            st.warning("⚠️ Google Drive not configured. Data saved locally only.")
+                        
+                        time.sleep(1)  # Delay for user feedback
+                        st.rerun()
                     else:
-                        st.warning("⚠️ Google Drive not configured. Data saved locally.")
-                    
-                    time.sleep(1)  # Delay for user feedback
-
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to save calibration data.")
+                        st.error("❌ Failed to save calibration data. Please try again.")
 
     # Add Drive settings in sidebar
     with st.sidebar:
