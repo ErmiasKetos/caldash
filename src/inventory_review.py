@@ -139,7 +139,7 @@ def inventory_review_page():
                                 else:
                                     st.success("✅ Changes saved to local inventory")
                                 time.sleep(1)  # Give time for the user to see the success message
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.error("❌ Failed to update status. Please try again.")
                     else:
