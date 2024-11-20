@@ -200,9 +200,14 @@ def registration_calibration_page():
             const printSerialNumber = () => {{
                 const serialNumber = document.getElementById('serial-number').textContent;
                 const printWindow = window.open('', '_blank');
-                printWindow.document.write(`<html><head><title>Print Serial Number</title></head><body>`);
-                printWindow.document.write(`<h1 style="font-family: Arial; font-size: 16px;">Serial Number: ${serialNumber}</h1>`);
-                printWindow.document.write(`</body></html>`);
+                printWindow.document.write(`
+                    <html>
+                        <head><title>Print Serial Number</title></head>
+                        <body>
+                            <h1 style="font-family: Arial; font-size: 16px;">Serial Number: ${serialNumber}</h1>
+                        </body>
+                    </html>
+                `);
                 printWindow.document.close();
                 printWindow.print();
             }};
