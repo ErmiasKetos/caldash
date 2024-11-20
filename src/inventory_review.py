@@ -134,14 +134,27 @@ def inventory_review_page():
                         with st.spinner("Updating status..."):
                             if update_probe_status(selected_probe, new_status):
                                 st.success(f"✅ Updated status of {selected_probe} to {new_status}")
-                                # Re-save inventory
-                                save_inventory(st.session_state.inventory)
-                                # Rerun to refresh the page
+                                if 'drive_manager' in st.session_state:
+                                    st.success("✅ Changes saved to both local inventory and Google Drive")
+                                else:
+                                    st.success("✅ Changes saved to local inventory")
+                                time.sleep(1)  # Give time for the user to see the success message
                                 st.experimental_rerun()
                             else:
-                                st.error("Failed to update status")
+                                st.error("❌ Failed to update status. Please try again.")
                     else:
-                        st.info("No status change selected")
+                        st.info("ℹ️ No status change selected")
+                
+                # Add last save information
+                if 'last_save_time' in st.session_state:
+                    st.markdown(
+                        f"""
+                        <div style='padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-top: 10px;'>
+                            📝 Last saved: {st.session_state['last_save_time']}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
     # Download section
     st.markdown("### Download Inventory")
