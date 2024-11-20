@@ -16,9 +16,11 @@ INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
 
 # Status color mapping
 STATUS_COLORS = {
-    'Instock': '#90EE90',  # Green
-    'Shipped': '#ADD8E6',  # Light Blue
-    'Scraped': '#FFB6C6'   # Red
+    'Instock': '#90EE90',      # Light Green
+    'Calibrated': '#98FB98',   # Pale Green
+    'Shipped': '#ADD8E6',      # Light Blue
+    'Scraped': '#FFB6C6'       # Light Red
+
 }
 
 def initialize_inventory():
