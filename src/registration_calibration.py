@@ -193,37 +193,67 @@ def registration_calibration_page():
     
     # Display Serial Number with Print Button
     col1, col2 = st.columns([3, 1])
+    
     with col1:
         st.markdown(f"""
-            <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px; padding-top: 10px;">
+            <div style="font-family: Arial; font-size: 16px; padding-top: 10px;">
                 Generated Serial Number: 
-                <span id="serial-number" style="font-weight: bold; color: #0071ba;">{serial_number}</span>
+                <span style="font-weight: bold; color: #0071ba;">{serial_number}</span>
             </div>
-            """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    
     with col2:
-        if st.button("🖨️ Print", key="print_button"):
-            st.markdown(f"""
-                <style>
-                    @media print {{
-                        /* Hide everything except what's in the print-content div */
-                        body * {{
-                            display: none;
-                        }}
-                        .print-content, .print-content * {{
-                            display: block !important;
-                        }}
-                    }}
-                </style>
-                <div class="print-content" style="text-align: center; padding: 20px;">
-                    <h2>Serial Number</h2>
-                    <div style="font-size: 36px; font-weight: bold; margin: 20px 0;">
-                        {serial_number}
-                    </div>
-                </div>
-                <script>
-                    window.print();
-                </script>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="padding-top: 10px;">
+                <button onclick="printLabel()" style="padding: 5px 15px; cursor: pointer;">
+                    🖨️ Print Label
+                </button>
+            </div>
+            <iframe id="printFrame" style="display: none;"></iframe>
+            <script>
+                function printLabel() {{
+                    const content = `
+                        <html>
+                            <head>
+                                <style>
+                                    @page {{
+                                        size: 2.25in 1.25in;
+                                        margin: 0;
+                                    }}
+                                    body {{
+                                        width: 2.25in;
+                                        height: 1.25in;
+                                        margin: 0;
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        font-family: Arial, sans-serif;
+                                    }}
+                                    .label {{
+                                        text-align: center;
+                                        font-size: 16pt;
+                                        font-weight: bold;
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="label">{serial_number}</div>
+                            </body>
+                        </html>
+                    `;
+                    
+                    const frame = document.getElementById('printFrame');
+                    frame.contentWindow.document.open();
+                    frame.contentWindow.document.write(content);
+                    frame.contentWindow.document.close();
+                    
+                    setTimeout(() => {{
+                        frame.contentWindow.focus();
+                        frame.contentWindow.print();
+                    }}, 250);
+                }}
+            </script>
+        """, unsafe_allow_html=True)
 
     # Render Calibration Form
     calibration_data = render_calibration_form(probe_type)
