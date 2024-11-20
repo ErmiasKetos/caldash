@@ -189,25 +189,25 @@ def registration_calibration_page():
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
     serial_number = get_next_serial_number(probe_type, manufacturing_date)
 
-# Display Serial Number with Print Button
-st.markdown(f"""
-    <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px;">
-        Generated Serial Number: 
-        <span id="serial-number" style="font-weight: bold; cursor: pointer; color: blue;"
-              onclick="printSerialNumber()">{serial_number}</span>
-    </div>
-    <script>
-        const printSerialNumber = () => {{
-            const serialNumber = document.getElementById('serial-number').textContent;
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`<html><head><title>Print Serial Number</title></head><body>`);
-            printWindow.document.write(`<h1 style="font-family: Arial; font-size: 16px;">Serial Number: ${serialNumber}</h1>`);
-            printWindow.document.write(`</body></html>`);
-            printWindow.document.close();
-            printWindow.print();
-        }};
-    </script>
-""", unsafe_allow_html=True)
+    # Display Serial Number with Print Button
+    st.markdown(f"""
+        <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px;">
+            Generated Serial Number: 
+            <span id="serial-number" style="font-weight: bold; cursor: pointer; color: blue;"
+                  onclick="printSerialNumber()">{serial_number}</span>
+        </div>
+        <script>
+            const printSerialNumber = () => {{
+                const serialNumber = document.getElementById('serial-number').textContent;
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`<html><head><title>Print Serial Number</title></head><body>`);
+                printWindow.document.write(`<h1 style="font-family: Arial; font-size: 16px;">Serial Number: ${serialNumber}</h1>`);
+                printWindow.document.write(`</body></html>`);
+                printWindow.document.close();
+                printWindow.print();
+            }};
+        </script>
+    """, unsafe_allow_html=True)
 
 
 
