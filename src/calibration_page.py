@@ -258,58 +258,86 @@ def find_probe(serial_number):
 def update_probe_calibration(serial_number, calibration_data):
     """Update probe calibration data in the inventory."""
     try:
-        logger.info(f"Starting calibration update for probe: {serial_number}")
-        logger.info(f"Calibration data: {calibration_data}")
+        # Debug print statements
+        st.write("Debug: Starting calibration save...")
+        st.write(f"Debug: Serial Number: {serial_number}")
         
         inventory_df = st.session_state.inventory
-        logger.info(f"Current inventory size: {len(inventory_df)}")
+        st.write(f"Debug: Found inventory with {len(inventory_df)} records")
         
+        # Check if serial number exists
+        if serial_number not in inventory_df['Serial Number'].values:
+            st.error(f"Serial number {serial_number} not found in inventory")
+            return False
+            
         probe_idx = inventory_df[inventory_df['Serial Number'] == serial_number].index[0]
-        logger.info(f"Found probe at index: {probe_idx}")
+        st.write(f"Debug: Found probe at index {probe_idx}")
         
-        # Update calibration data and related fields
+        # Try to convert calibration data to JSON
         try:
             json_data = json.dumps(calibration_data)
-            logger.info("Successfully converted calibration data to JSON")
+            st.write("Debug: Successfully converted calibration data to JSON")
         except Exception as json_error:
-            logger.error(f"JSON conversion error: {str(json_error)}")
-            raise
+            st.error(f"Failed to convert calibration data to JSON: {str(json_error)}")
+            return False
         
-        # Update the fields
-        inventory_df.at[probe_idx, 'Calibration Data'] = json_data
-        inventory_df.at[probe_idx, 'Last Modified'] = datetime.now().strftime("%Y-%m-%d")
-        inventory_df.at[probe_idx, 'Next Calibration'] = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
-        inventory_df.at[probe_idx, 'Status'] = "Calibrated"
+        # Update all fields
+        try:
+            inventory_df.at[probe_idx, 'Calibration Data'] = json_data
+            inventory_df.at[probe_idx, 'Last Modified'] = datetime.now().strftime("%Y-%m-%d")
+            inventory_df.at[probe_idx, 'Next Calibration'] = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+            inventory_df.at[probe_idx, 'Status'] = "Calibrated"
+            st.write("Debug: Successfully updated DataFrame")
+        except Exception as df_error:
+            st.error(f"Failed to update DataFrame: {str(df_error)}")
+            return False
         
-        logger.info("Successfully updated probe data in DataFrame")
+        # Update session state
+        try:
+            st.session_state.inventory = inventory_df
+            st.write("Debug: Updated session state inventory")
+        except Exception as session_error:
+            st.error(f"Failed to update session state: {str(session_error)}")
+            return False
         
-        # Update the session state inventory
-        st.session_state.inventory = inventory_df
-        logger.info("Updated session state inventory")
+        # Try to save locally
+        try:
+            save_success = save_inventory(st.session_state.inventory)
+            st.write(f"Debug: Local save result: {save_success}")
+            if not save_success:
+                st.error("Failed to save to local inventory")
+                return False
+        except Exception as save_error:
+            st.error(f"Error during local save: {str(save_error)}")
+            return False
         
-        # Save to both local CSV and Google Drive
-        save_success = save_inventory(st.session_state.inventory)
-        logger.info(f"Local save result: {save_success}")
+        # Try to save to Google Drive
+        if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+            try:
+                st.write("Debug: Attempting Google Drive save")
+                drive_success = st.session_state.drive_manager.save_to_drive(
+                    st.session_state.inventory,
+                    st.session_state.get('drive_folder_id', BACKUP_FOLDER_ID)
+                )
+                st.write(f"Debug: Google Drive save result: {drive_success}")
+                
+                if drive_success:
+                    st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    st.write("Debug: Successfully completed all save operations")
+                    return True
+                else:
+                    st.error("Failed to save to Google Drive")
+                    return False
+            except Exception as drive_error:
+                st.error(f"Error during Google Drive save: {str(drive_error)}")
+                return False
         
-        # Save to Google Drive if configured
-        if save_success and 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
-            logger.info("Attempting Google Drive save")
-            drive_success = st.session_state.drive_manager.save_to_drive(
-                st.session_state.inventory,
-                st.session_state.get('drive_folder_id', BACKUP_FOLDER_ID)
-            )
-            logger.info(f"Google Drive save result: {drive_success}")
-            
-            if drive_success:
-                st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                logger.info("Successfully saved to both local and Drive")
-            return drive_success
         return save_success
 
     except Exception as e:
-        logger.error(f"Failed to update probe calibration: {str(e)}")
-        logger.error(f"Full error details: ", exc_info=True)
+        st.error(f"Unexpected error: {str(e)}")
         return False
+
 
 def calibration_page():
     """Main page for probe calibration"""
