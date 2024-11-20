@@ -3,12 +3,72 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 import time
+import json
 from .drive_manager import DriveManager
-from .inventory_manager import save_inventory
+from .inventory_manager import save_inventory, STATUS_COLORS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_searchable_probes():
+    """Get list of searchable probes with their details for autocomplete"""
+    if 'inventory' not in st.session_state:
+        return []
+    
+    inventory_df = st.session_state.inventory
+    searchable_probes = []
+    
+    for _, row in inventory_df.iterrows():
+        probe_info = {
+            'serial': row['Serial Number'],
+            'type': row['Type'],
+            'manufacturer': row['Manufacturer'],
+            'status': row['Status'],
+            'display': f"{row['Serial Number']} - {row['Type']} ({row['Status']})"
+        }
+        searchable_probes.append(probe_info)
+    
+    return searchable_probes
+
+def render_autocomplete_search():
+    """Render autocomplete search bar for probes"""
+    probes = get_searchable_probes()
+    
+    # Create search input with autocomplete
+    search_query = st.text_input(
+        "Search Probe",
+        key="probe_search",
+        placeholder="Type to search by Serial Number..."
+    ).strip().lower()
+    
+    # Filter probes based on search query
+    filtered_probes = []
+    if search_query:
+        filtered_probes = [
+            probe for probe in probes
+            if search_query in probe['serial'].lower() or
+               search_query in probe['type'].lower() or
+               search_query in probe['manufacturer'].lower()
+        ]
+    
+    # Display filtered results in a selectbox if there are matches
+    selected_probe = None
+    if filtered_probes:
+        options = ["Select a probe..."] + [p['display'] for p in filtered_probes]
+        selected_index = st.selectbox(
+            "Matching Probes",
+            options,
+            key="probe_selector"
+        )
+        
+        if selected_index != "Select a probe...":
+            selected_probe = next(
+                p['serial'] for p in filtered_probes
+                if p['display'] == selected_index
+            )
+    
+    return selected_probe
 
 def render_ph_calibration():
     """Render pH probe calibration form."""
@@ -122,10 +182,10 @@ def update_probe_calibration(serial_number, calibration_data):
         probe_idx = inventory_df[inventory_df['Serial Number'] == serial_number].index[0]
         
         # Update calibration data and related fields
-        inventory_df.at[probe_idx, 'Calibration Data'] = calibration_data
+        inventory_df.at[probe_idx, 'Calibration Data'] = json.dumps(calibration_data)
         inventory_df.at[probe_idx, 'Last Modified'] = datetime.now().strftime("%Y-%m-%d")
         inventory_df.at[probe_idx, 'Next Calibration'] = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
-        inventory_df.at[probe_idx, 'Status'] = "Instock"  # Update status after calibration
+        inventory_df.at[probe_idx, 'Status'] = "Calibrated"  # Update status to Calibrated
         
         st.session_state.inventory = inventory_df
         return True
@@ -133,15 +193,34 @@ def update_probe_calibration(serial_number, calibration_data):
         logger.error(f"Failed to update probe calibration: {str(e)}")
         return False
 
+def populate_calibration_form(probe_type, calibration_data):
+    """Populate calibration form with existing data"""
+    try:
+        if not calibration_data:
+            return
+        
+        # Parse JSON string if stored as string
+        if isinstance(calibration_data, str):
+            calibration_data = json.loads(calibration_data)
+            
+        # Set session state values for each field based on probe type
+        # We'll repopulate the form fields using the session state
+        for key, value in calibration_data.items():
+            if key in st.session_state:
+                st.session_state[key] = value
+                
+    except Exception as e:
+        logger.error(f"Error populating form: {str(e)}")
+
 def calibration_page():
     """Main page for probe calibration"""
     st.markdown('<h1 style="font-family: Arial; color: #0071ba;">🔍 Probe Calibration</h1>', unsafe_allow_html=True)
 
-    # Search for probe
-    serial_number = st.text_input("Enter Probe Serial Number").strip()
+    # Autocomplete search
+    selected_serial = render_autocomplete_search()
     
-    if st.button("Search") and serial_number:
-        probe = find_probe(serial_number)
+    if selected_serial:
+        probe = find_probe(selected_serial)
         
         if probe is None:
             st.error("❌ Probe not found in inventory. Please check the serial number.")
@@ -159,46 +238,45 @@ def calibration_page():
             st.write(f"**Status:** {probe['Status']}")
             st.write(f"**Entry Date:** {probe['Entry Date']}")
         
-        # Calibration Date
-        calibration_date = st.date_input("Calibration Date", datetime.today())
-        
-        # Render calibration form based on probe type
-        calibration_data = render_calibration_form(probe['Type'])
-        
-        # Save calibration data
-        if st.button("Save Calibration"):
-            calibration_data['calibration_date'] = calibration_date.strftime("%Y-%m-%d")
-            success = update_probe_calibration(serial_number, calibration_data)
+        # Check probe status
+        if probe['Status'] in ['Calibrated', 'Shipped']:
+            st.warning(f"⚠️ This probe was already calibrated on {probe['Last Modified']} " +
+                      f"and is currently {probe['Status']}. No further calibration is allowed.")
             
-            if success:
-                st.success(f"✅ Calibration data saved successfully for probe {serial_number}!")
+            # Display existing calibration data in read-only mode
+            if 'Calibration Data' in probe and probe['Calibration Data']:
+                st.markdown("### Previous Calibration Data")
+                populate_calibration_form(probe['Type'], probe['Calibration Data'])
                 
-                # Save to Google Drive if configured
-                if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
-                    if st.session_state.drive_manager.save_to_drive(st.session_state.inventory, st.session_state.drive_folder_id):
-                        st.success("✅ Inventory updated in Google Drive.")
-                        st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        elif probe['Status'] != 'Instock':
+            st.error("❌ Only probes with 'Instock' status can be calibrated.")
+            
+        else:
+            # Calibration Date
+            calibration_date = st.date_input("Calibration Date", datetime.today())
+            
+            # Render calibration form based on probe type
+            calibration_data = render_calibration_form(probe['Type'])
+            
+            # Save calibration data
+            if st.button("Save Calibration"):
+                calibration_data['calibration_date'] = calibration_date.strftime("%Y-%m-%d")
+                success = update_probe_calibration(selected_serial, calibration_data)
+                
+                if success:
+                    st.success(f"✅ Calibration data saved successfully for probe {selected_serial}!")
+                    
+                    # Save to Google Drive if configured
+                    if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+                        if st.session_state.drive_manager.save_to_drive(st.session_state.inventory, st.session_state.drive_folder_id):
+                            st.success("✅ Inventory updated in Google Drive.")
+                            st.session_state['last_save_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        else:
+                            st.warning("⚠️ Failed to save to Google Drive. Data saved locally.")
                     else:
-                        st.warning("⚠️ Failed to save to Google Drive. Data saved locally.")
+                        st.warning("⚠️ Google Drive not configured. Data saved locally.")
+                    
+                    time.sleep(1)  # Delay for user feedback
+                    st.rerun()
                 else:
-                    st.warning("⚠️ Google Drive not configured. Data saved locally.")
-                
-                time.sleep(1)  # Delay for user feedback
-                st.rerun()
-            else:
-                st.error("❌ Failed to save calibration data.")
-
-    # Add Drive settings in sidebar
-    with st.sidebar:
-        st.markdown("### Google Drive Settings")
-        if 'drive_folder_id' in st.session_state:
-            st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
-            if st.button("Test Folder Access"):
-                drive_manager = st.session_state.get('drive_manager')
-                if drive_manager and drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
-                    st.success("✅ Folder access verified!")
-                else:
-                    st.error("❌ Could not access folder. Check permissions.")
-
-if __name__ == "__main__":
-    calibration_page()
+                    st.error("❌ Failed to save calib
