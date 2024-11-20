@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import datetime
+from datetime import datetime, timedelta, date
 import logging
 import time
 import json
@@ -387,7 +387,7 @@ def calibration_page():
             
         else:
             # Calibration Date
-            calibration_date = st.date_input("Calibration Date", datetime.today())
+            calibration_date = st.date_input("Calibration Date", date.today())
             
             # Render calibration form based on probe type
             calibration_data = render_calibration_form(probe['Type'])
