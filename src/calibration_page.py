@@ -268,7 +268,6 @@ def find_probe(serial_number):
 def update_probe_calibration(serial_number, calibration_data):
     """Update probe calibration data in the inventory."""
     try:
-        # Debug print statements
         st.write("Debug: Starting calibration save...")
         st.write(f"Debug: Serial Number: {serial_number}")
         
@@ -283,9 +282,10 @@ def update_probe_calibration(serial_number, calibration_data):
         probe_idx = inventory_df[inventory_df['Serial Number'] == serial_number].index[0]
         st.write(f"Debug: Found probe at index {probe_idx}")
         
-        # Try to convert calibration data to JSON
+        # Convert dates to strings before JSON serialization
         try:
-            json_data = json.dumps(calibration_data)
+            converted_data = convert_dates_to_strings(calibration_data)
+            json_data = json.dumps(converted_data)
             st.write("Debug: Successfully converted calibration data to JSON")
         except Exception as json_error:
             st.error(f"Failed to convert calibration data to JSON: {str(json_error)}")
@@ -314,15 +314,12 @@ def update_probe_calibration(serial_number, calibration_data):
         try:
             save_success = save_inventory(st.session_state.inventory)
             st.write(f"Debug: Local save result: {save_success}")
-            if not save_success:
-                st.error("Failed to save to local inventory")
-                return False
         except Exception as save_error:
             st.error(f"Error during local save: {str(save_error)}")
             return False
         
         # Try to save to Google Drive
-        if 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
+        if save_success and 'drive_manager' in st.session_state and 'drive_folder_id' in st.session_state:
             try:
                 st.write("Debug: Attempting Google Drive save")
                 drive_success = st.session_state.drive_manager.save_to_drive(
@@ -341,7 +338,7 @@ def update_probe_calibration(serial_number, calibration_data):
             except Exception as drive_error:
                 st.error(f"Error during Google Drive save: {str(drive_error)}")
                 return False
-        
+                
         return save_success
 
     except Exception as e:
