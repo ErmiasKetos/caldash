@@ -254,3 +254,54 @@ def registration_calibration_page():
 if __name__ == "__main__":
     registration_calibration_page()
 
+def load_inventory_from_drive():
+    """Load the inventory CSV from Google Drive into the app's session state."""
+    try:
+        drive_manager = st.session_state.get("drive_manager")
+        folder_id = st.session_state.get("drive_folder_id")
+
+        if not drive_manager:
+            st.error("❌ Drive Manager is not initialized. Please check your Google Drive setup.")
+            return False
+
+        if not folder_id:
+            st.error("❌ Google Drive folder ID is not set. Please configure your settings.")
+            return False
+
+        # Download the file from Google Drive
+        st.info("📂 Attempting to load the inventory CSV from Google Drive...")
+        file_content = drive_manager.download_inventory_csv(folder_id, "wbpms_inventory_2024.csv")
+
+        # Parse the CSV content
+        existing_inventory = pd.read_csv(file_content)
+
+        # Merge with session state inventory, avoiding duplicates
+        if 'inventory' in st.session_state and not st.session_state.inventory.empty:
+            st.session_state.inventory = pd.concat(
+                [st.session_state.inventory, existing_inventory]
+            ).drop_duplicates(subset="Serial Number", keep="last")
+        else:
+            st.session_state.inventory = existing_inventory
+
+        return True
+    except FileNotFoundError:
+        st.warning("⚠️ Inventory file not found. A new file will be created.")
+        st.session_state.inventory = pd.DataFrame(columns=[
+            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
+            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
+            "Last Modified", "Change Date"
+        ])
+        return True
+    except pd.errors.EmptyDataError:
+        st.warning("⚠️ Inventory file is empty. Starting with a new inventory.")
+        st.session_state.inventory = pd.DataFrame(columns=[
+            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
+            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
+            "Last Modified", "Change Date"
+        ])
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to load inventory. Error: {e}")
+        return False
+
+
