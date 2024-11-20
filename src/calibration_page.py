@@ -277,6 +277,22 @@ def calibration_page():
                         st.warning("⚠️ Google Drive not configured. Data saved locally.")
                     
                     time.sleep(1)  # Delay for user feedback
+
                     st.rerun()
                 else:
-                    st.error("❌ Failed to save calib
+                    st.error("❌ Failed to save calibration data.")
+
+    # Add Drive settings in sidebar
+    with st.sidebar:
+        st.markdown("### Google Drive Settings")
+        if 'drive_folder_id' in st.session_state:
+            st.success(f"✅ Using folder ID: {st.session_state['drive_folder_id']}")
+            if st.button("Test Folder Access"):
+                drive_manager = st.session_state.get('drive_manager')
+                if drive_manager and drive_manager.verify_folder_access(st.session_state['drive_folder_id']):
+                    st.success("✅ Folder access verified!")
+                else:
+                    st.error("❌ Could not access folder. Check permissions.")
+
+if __name__ == "__main__":
+    calibration_page()
