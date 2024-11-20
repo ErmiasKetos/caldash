@@ -17,10 +17,9 @@ INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
 # Status color mapping
 STATUS_COLORS = {
     'Instock': '#90EE90',      # Light Green - indicates ready for use
-    'Calibrated': '#32CD32
-    'Shipped': '#ADD8E6',      # Light Blue
-    'Scraped': '#FFB6C6'       # Light Red
-
+    'Calibrated': '#32CD32',   # Lime Green - darker than Instock, indicates verified/ready
+    'Shipped': '#87CEEB',      # Sky Blue - indicates in transit/deployed
+    'Scraped': '#FF6B6B'       # Coral Red - clearly indicates end-of-life/unusable
 }
 
 def initialize_inventory():
