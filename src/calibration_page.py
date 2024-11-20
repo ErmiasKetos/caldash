@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+import datetime
 import logging
 import time
 import json
@@ -16,7 +16,7 @@ def convert_dates_to_strings(data):
     """Convert all date objects in calibration data to string format."""
     converted_data = {}
     for key, value in data.items():
-        if isinstance(value, datetime.date):
+        if isinstance(value, (datetime.date, datetime.datetime)):  # Fixed type check
             converted_data[key] = value.strftime("%Y-%m-%d")
         else:
             converted_data[key] = value
