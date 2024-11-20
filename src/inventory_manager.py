@@ -16,8 +16,8 @@ INVENTORY_FILENAME = "wbpms_inventory_2024.csv"
 
 # Status color mapping
 STATUS_COLORS = {
-    'Instock': '#90EE90',      # Light Green
-    'Calibrated': '#98FB98',   # Pale Green
+    'Instock': '#90EE90',      # Light Green - indicates ready for use
+    'Calibrated': '#32CD32
     'Shipped': '#ADD8E6',      # Light Blue
     'Scraped': '#FFB6C6'       # Light Red
 
