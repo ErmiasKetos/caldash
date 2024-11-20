@@ -9,9 +9,8 @@ from datetime import datetime
 from src.drive_manager import DriveManager
 from src.inventory_review import inventory_review_page
 from src.inventory_manager import initialize_inventory
-from src.registration_page import registration_page
-from src.calibration_page import calibration_page
-
+from src.registration_page import registration_page  # Updated import
+from src.calibration_page import calibration_page   # Updated import
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -155,10 +154,10 @@ def main():
                 "Email": user_info.get('email', 'Not available')
             })
 
-        # Sidebar navigation
+        # Updated sidebar navigation with separate registration and calibration pages
         page = st.sidebar.radio(
             "Navigate to",
-            [ "Probe Registration","Probe Calibration", "Dashboard", "Inventory Review"]
+            ["Dashboard", "Probe Registration", "Probe Calibration", "Inventory Review"]
         )
 
         # Page routing
