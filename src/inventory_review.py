@@ -42,6 +42,8 @@ def display_calibration_details(probe_data):
                             st.write("mV Measurements:")
                             st.write(f"- Initial: {calibration_data.get(f'{buffer_label}_initial_mv', 'N/A')} mV")
                             st.write(f"- Calibrated: {calibration_data.get(f'{buffer_label}_calibrated_mv', 'N/A')} mV")
+        except Exception as e:
+            st.error(f"Error displaying calibration data: {str(e)}")
 
 
 def inventory_review_page():
