@@ -161,8 +161,10 @@ def main():
         )
 
         # Page routing
-        if page == "Dashboard":
-            render_dashboard()
+        if page == "Probe Registration":
+            render_registration_page()
+        elif page == "Dashboard":
+            dashboard()
         elif page == "Probe Registration":
             registration_page()
         elif page == "Probe Calibration":
