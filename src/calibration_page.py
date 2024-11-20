@@ -25,50 +25,127 @@ def get_searchable_probes():
             'type': row['Type'],
             'manufacturer': row['Manufacturer'],
             'status': row['Status'],
-            'display': f"{row['Serial Number']} - {row['Type']} ({row['Status']})"
+            'display': f"{row['Serial Number']} - {row['Type']} ({row['Status']})",
+            'search_text': f"{row['Serial Number']} {row['Type']} {row['Manufacturer']} {row['Status']}"
         }
         searchable_probes.append(probe_info)
     
     return searchable_probes
 
 def render_autocomplete_search():
-    """Render autocomplete search bar for probes"""
+    """Render autocomplete search bar for probes with real-time suggestions"""
     probes = get_searchable_probes()
     
-    # Create search input with autocomplete
-    search_query = st.text_input(
-        "Search Probe",
-        key="probe_search",
-        placeholder="Type to search by Serial Number..."
-    ).strip().lower()
+    # Create a container for the search section
+    search_container = st.container()
     
-    # Filter probes based on search query
-    filtered_probes = []
-    if search_query:
-        filtered_probes = [
-            probe for probe in probes
-            if search_query in probe['serial'].lower() or
-               search_query in probe['type'].lower() or
-               search_query in probe['manufacturer'].lower()
-        ]
-    
-    # Display filtered results in a selectbox if there are matches
-    selected_probe = None
-    if filtered_probes:
-        options = ["Select a probe..."] + [p['display'] for p in filtered_probes]
-        selected_index = st.selectbox(
-            "Matching Probes",
-            options,
-            key="probe_selector"
-        )
+    with search_container:
+        st.markdown("""
+            <style>
+                .search-container {
+                    margin-bottom: 1rem;
+                }
+                .search-input {
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    border: 1px solid #ddd;
+                    width: 100%;
+                }
+                .suggestion-box {
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    margin-top: 4px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                }
+                .suggestion-item {
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #eee;
+                }
+                .suggestion-item:hover {
+                    background-color: #f0f2f6;
+                }
+                .status-badge {
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-size: 0.8em;
+                    margin-left: 8px;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Initialize session state for search
+        if 'search_query' not in st.session_state:
+            st.session_state.search_query = ""
+        if 'selected_probe' not in st.session_state:
+            st.session_state.selected_probe = None
+        if 'show_suggestions' not in st.session_state:
+            st.session_state.show_suggestions = False
+
+        # Search input with autocomplete
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            search_query = st.text_input(
+                "🔍 Search Probe",
+                value=st.session_state.search_query,
+                key="probe_search",
+                placeholder="Type to search by Serial Number, Type, or Manufacturer...",
+            ).strip()
+        with col2:
+            if st.button("Clear", key="clear_search"):
+                st.session_state.search_query = ""
+                st.session_state.selected_probe = None
+                st.session_state.show_suggestions = False
+                st.rerun()
+
+        # Update session state
+        st.session_state.search_query = search_query
         
-        if selected_index != "Select a probe...":
-            selected_probe = next(
-                p['serial'] for p in filtered_probes
-                if p['display'] == selected_index
-            )
-    
-    return selected_probe
+        # Filter probes based on search query
+        if search_query:
+            filtered_probes = [
+                probe for probe in probes
+                if search_query.lower() in probe['search_text'].lower()
+            ]
+            
+            # Show suggestions
+            if filtered_probes:
+                st.markdown("#### Matching Probes")
+                for probe in filtered_probes[:5]:  # Limit to 5 suggestions
+                    status_color = {
+                        'Instock': '#90EE90',
+                        'Calibrated': '#98FB98',
+                        'Shipped': '#ADD8E6',
+                        'Scraped': '#FFB6C6'
+                    }.get(probe['status'], '#FFFFFF')
+                    
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        st.markdown(
+                            f"""
+                            <div style="
+                                padding: 8px;
+                                border: 1px solid #ddd;
+                                border-radius: 4px;
+                                margin-bottom: 4px;
+                                background-color: white;
+                            ">
+                                <span style="font-weight: bold;">{probe['serial']}</span><br/>
+                                <span style="color: #666;">{probe['type']} - {probe['manufacturer']}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    with col2:
+                        if st.button("Select", key=f"select_{probe['serial']}"):
+                            st.session_state.selected_probe = probe['serial']
+                            st.session_state.search_query = probe['display']
+                            st.rerun()
+            else:
+                st.info("No matching probes found.")
+
+        return st.session_state.get('selected_probe')
 
 def render_ph_calibration():
     """Render pH probe calibration form."""
