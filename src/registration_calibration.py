@@ -190,52 +190,40 @@ def registration_calibration_page():
     serial_number = get_next_serial_number(probe_type, manufacturing_date)
 
     
+    
     # Display Serial Number with Print Button
-    st.markdown(f"""
-        <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px;">
-            Generated Serial Number: 
-            <span id="serial-number" style="font-weight: bold; color: blue;">{serial_number}</span>
-            <button onclick="printSerialNumber('{serial_number}')" 
-                    style="margin-left: 10px; padding: 5px 10px; cursor: pointer;">
-                🖨️ Print
-            </button>
-        </div>
-        <script>
-            function printSerialNumber(serialNum) {{
-                var printWindow = window.open('', '', 'width=600,height=400');
-                printWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Print Serial Number</title>
-                            <style>
-                                body {{
-                                    font-family: Arial, sans-serif;
-                                    text-align: center;
-                                    padding-top: 50px;
-                                }}
-                                .serial-number {{
-                                    font-size: 36px;
-                                    font-weight: bold;
-                                    margin: 20px 0;
-                                }}
-                            </style>
-                        </head>
-                        <body>
-                            <h2>Serial Number</h2>
-                            <div class="serial-number">${{serialNum}}</div>
-                        </body>
-                    </html>
-                `);
-                printWindow.document.close();
-                printWindow.focus();
-                setTimeout(() => {{
-                    printWindow.print();
-                    printWindow.close();
-                }}, 250);
-            }}
-        </script>
-    """, unsafe_allow_html=True)
-
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown(f"""
+            <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px; padding-top: 10px;">
+                Generated Serial Number: 
+                <span id="serial-number" style="font-weight: bold; color: #0071ba;">{serial_number}</span>
+            </div>
+            """, unsafe_allow_html=True)
+    with col2:
+        if st.button("🖨️ Print", key="print_button"):
+            st.markdown(f"""
+                <style>
+                    @media print {{
+                        /* Hide everything except what's in the print-content div */
+                        body * {{
+                            display: none;
+                        }}
+                        .print-content, .print-content * {{
+                            display: block !important;
+                        }}
+                    }}
+                </style>
+                <div class="print-content" style="text-align: center; padding: 20px;">
+                    <h2>Serial Number</h2>
+                    <div style="font-size: 36px; font-weight: bold; margin: 20px 0;">
+                        {serial_number}
+                    </div>
+                </div>
+                <script>
+                    window.print();
+                </script>
+            """, unsafe_allow_html=True)
 
     # Render Calibration Form
     calibration_data = render_calibration_form(probe_type)
