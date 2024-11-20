@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
-import win32print
-import win32ui  # Windows-specific for printing
 import time  # Added for delay functionality
 from .drive_manager import DriveManager
 from .inventory_manager import (
@@ -33,47 +31,11 @@ SERVICE_LIFE = {
     "EC Probe": 10,
 }
 
-# Add Status Colors definition
-STATUS_COLORS = {
-    'Instock': '#90EE90',  # Green
-    'Shipped': '#ADD8E6',  # Light Blue
-    'Scraped': '#FFB6C6'   # Red
-}
 
-def print_serial_number(serial_number, font_size=8.5):
-    """Print the given serial number using the default printer."""
-    try:
-        hprinter = win32print.OpenPrinter(win32print.GetDefaultPrinter())
-        hprinterdc = win32ui.CreateDC()
-        hprinterdc.CreatePrinterDC(win32print.GetDefaultPrinter())
-        hprinterdc.StartDoc("Serial Number Print")
-        hprinterdc.StartPage()
-
-        # Create a font object
-        font = win32ui.CreateFont({
-            "name": "Arial",
-            "height": int(-font_size * 10),  # Font size in pt
-        })
-        hprinterdc.SelectObject(font)
-
-        # Print the serial number
-        hprinterdc.TextOut(100, 100, f"Serial Number: {serial_number}")
-
-        hprinterdc.EndPage()
-        hprinterdc.EndDoc()
-        hprinterdc.DeleteDC()
-        win32print.ClosePrinter(hprinter)
-        st.success(f"Serial Number '{serial_number}' printed successfully.")
-    except Exception as e:
-        st.error(f"Failed to print: {e}")
-
-
-# Function to render calibration forms
 def render_ph_calibration():
-    """Render pH probe calibration form"""
+    """Render pH probe calibration form."""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">pH Calibration</h3>', unsafe_allow_html=True)
     ph_data = {}
-
     for idx, (buffer_label, color) in enumerate([("pH 4", "#f8f1f1"), ("pH 7", "#e8f8f2"), ("pH 10", "#e8f0f8")]):
         st.markdown(
             f'<div style="background-color: {color}; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
@@ -93,10 +55,9 @@ def render_ph_calibration():
 
 
 def render_do_calibration():
-    """Render DO probe calibration form"""
+    """Render DO probe calibration form."""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">DO Calibration</h3>', unsafe_allow_html=True)
     do_data = {}
-
     st.markdown('<h4 style="font-family: Arial; color: #0071ba;">Temperature</h4>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -120,11 +81,12 @@ def render_do_calibration():
             do_data[f"do_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (%)", value=0.0, key=f"do_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return do_data
+
+
 def render_orp_calibration():
-    """Render ORP probe calibration form"""
+    """Render ORP probe calibration form."""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">ORP Calibration</h3>', unsafe_allow_html=True)
     orp_data = {}
-    
     col1, col2 = st.columns(2)
     with col1:
         orp_data['control_number'] = st.text_input("Control Number", key="orp_control_number")
@@ -135,48 +97,31 @@ def render_orp_calibration():
         orp_data['calibrated'] = st.number_input("Calibrated Measurement (mV)", value=0.0, key="orp_calibrated")
     return orp_data
 
+
 def render_ec_calibration():
-    """Render EC probe calibration form"""
+    """Render EC probe calibration form."""
     st.markdown('<h3 style="font-family: Arial; color: #0071ba;">EC Calibration</h3>', unsafe_allow_html=True)
     ec_data = {}
-    
     for idx, label in enumerate(["84 μS/cm", "1413 μS/cm", "12.88 mS/cm"]):
         st.markdown(
             f'<div style="background-color: #f8f1f1; border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">'
             f'<h4 style="font-family: Arial; color: #333;">{label} Calibration</h4>',
             unsafe_allow_html=True,
         )
-        
         col1, col2 = st.columns(2)
         with col1:
-            ec_data[f"ec_{idx}_control"] = st.text_input(
-                f"{label} Control Number", 
-                key=f"ec_{idx}_control_number"
-            )
-            ec_data[f"ec_{idx}_exp"] = st.date_input(
-                f"{label} Expiration Date", 
-                key=f"ec_{idx}_expiration"
-            )
+            ec_data[f"ec_{idx}_control"] = st.text_input(f"{label} Control Number", key=f"ec_{idx}_control_number")
+            ec_data[f"ec_{idx}_exp"] = st.date_input(f"{label} Expiration Date", key=f"ec_{idx}_expiration")
         with col2:
-            ec_data[f"ec_{idx}_opened"] = st.date_input(
-                f"{label} Date Opened", 
-                key=f"ec_{idx}_date_opened"
-            )
-            ec_data[f"ec_{idx}_initial"] = st.number_input(
-                f"{label} Initial Measurement (μS/cm or mS/cm)", 
-                value=0.0, 
-                key=f"ec_{idx}_initial"
-            )
-            ec_data[f"ec_{idx}_calibrated"] = st.number_input(
-                f"{label} Calibrated Measurement (μS/cm or mS/cm)", 
-                value=0.0, 
-                key=f"ec_{idx}_calibrated"
-            )
+            ec_data[f"ec_{idx}_opened"] = st.date_input(f"{label} Date Opened", key=f"ec_{idx}_date_opened")
+            ec_data[f"ec_{idx}_initial"] = st.number_input(f"{label} Initial Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_initial")
+            ec_data[f"ec_{idx}_calibrated"] = st.number_input(f"{label} Calibrated Measurement (μS/cm or mS/cm)", value=0.0, key=f"ec_{idx}_calibrated")
         st.markdown('</div>', unsafe_allow_html=True)
     return ec_data
 
+
 def render_calibration_form(probe_type):
-    """Render appropriate calibration form based on the probe type"""
+    """Render appropriate calibration form based on the probe type."""
     if probe_type == "pH Probe":
         return render_ph_calibration()
     elif probe_type == "DO Probe":
@@ -187,59 +132,6 @@ def render_calibration_form(probe_type):
         return render_ec_calibration()
     return {}
 
-
-def load_inventory_from_drive():
-    """Load the inventory CSV from Google Drive into the app's session state."""
-    try:
-        drive_manager = st.session_state.get("drive_manager")
-        folder_id = st.session_state.get("drive_folder_id")
-
-        if not drive_manager:
-            st.error("❌ Drive Manager is not initialized. Please check your Google Drive setup.")
-            return False
-
-        if not folder_id:
-            st.error("❌ Google Drive folder ID is not set. Please configure your settings.")
-            return False
-
-        # Download the file from Google Drive
-        st.info("📂 Attempting to load the inventory CSV from Google Drive...")
-        file_content = drive_manager.download_inventory_csv(folder_id, "wbpms_inventory_2024.csv")
-
-        # Parse the CSV content
-        existing_inventory = pd.read_csv(file_content)
-
-        # Merge with session state inventory, avoiding duplicates
-        if 'inventory' in st.session_state and not st.session_state.inventory.empty:
-            st.session_state.inventory = pd.concat(
-                [st.session_state.inventory, existing_inventory]
-            ).drop_duplicates(subset="Serial Number", keep="last")
-        else:
-            st.session_state.inventory = existing_inventory
-
-        return True
-
-    except FileNotFoundError:
-        st.warning("⚠️ Inventory file not found. A new file will be created.")
-        st.session_state.inventory = pd.DataFrame(columns=[
-            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
-            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
-            "Last Modified", "Change Date"
-        ])
-        return True
-
-    except pd.errors.EmptyDataError:
-        st.warning("⚠️ Inventory file is empty. Starting with a new inventory.")
-        st.session_state.inventory = pd.DataFrame(columns=[
-            "Serial Number", "Type", "Manufacturer", "KETOS P/N",
-            "Mfg P/N", "Next Calibration", "Status", "Entry Date",
-            "Last Modified", "Change Date"
-        ])
-        return True
-
-    except Exception as e:
-        st.error(f"❌ Failed to load inventory. Error: {e}")
-        return False
 def registration_calibration_page():
     """Main page for probe registration and calibration"""
     # Initialize inventory
@@ -296,7 +188,27 @@ def registration_calibration_page():
     service_years = SERVICE_LIFE.get(probe_type, 2)
     expire_date = manufacturing_date + timedelta(days=service_years * 365)
     serial_number = get_next_serial_number(probe_type, manufacturing_date)
-    st.text(f"Generated Serial Number: {serial_number}")
+
+    # Display Serial Number with Print Button
+    st.markdown(f"""
+        <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px;">
+            Generated Serial Number: 
+            <span id="serial-number" style="font-weight: bold; cursor: pointer; color: blue;"
+                  onclick="window.print()">{serial_number}</span>
+        </div>
+        <script>
+            const printSerialNumber = () => {{
+                const serialNumber = document.getElementById('serial-number').textContent;
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`<html><head><title>Print Serial Number</title></head><body>`);
+                printWindow.document.write(`<h1 style="font-family: Arial; font-size: 16px;">Serial Number: ${serialNumber}</h1>`);
+                printWindow.document.write(`</body></html>`);
+                printWindow.document.close();
+                printWindow.print();
+            }};
+            document.getElementById('serial-number').addEventListener('click', printSerialNumber);
+        </script>
+    """, unsafe_allow_html=True)
 
     # Render Calibration Form
     calibration_data = render_calibration_form(probe_type)
@@ -338,5 +250,7 @@ def registration_calibration_page():
         else:
             st.error("❌ Failed to save probe.")
 
+
 if __name__ == "__main__":
     registration_calibration_page()
+
