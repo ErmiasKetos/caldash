@@ -16,7 +16,7 @@ def convert_dates_to_strings(data):
     """Convert all date objects in calibration data to string format."""
     converted_data = {}
     for key, value in data.items():
-        if isinstance(value, date)):  
+        if isinstance(value, date):  
             converted_data[key] = value.strftime("%Y-%m-%d")
         else:
             converted_data[key] = value
