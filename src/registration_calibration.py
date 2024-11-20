@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
+import win32print
+import win32ui  # Windows-specific for printing
 import time  # Added for delay functionality
 from .drive_manager import DriveManager
 from .inventory_manager import (
@@ -37,6 +39,34 @@ STATUS_COLORS = {
     'Shipped': '#ADD8E6',  # Light Blue
     'Scraped': '#FFB6C6'   # Red
 }
+
+def print_serial_number(serial_number, font_size=8.5):
+    """Print the given serial number using the default printer."""
+    try:
+        hprinter = win32print.OpenPrinter(win32print.GetDefaultPrinter())
+        hprinterdc = win32ui.CreateDC()
+        hprinterdc.CreatePrinterDC(win32print.GetDefaultPrinter())
+        hprinterdc.StartDoc("Serial Number Print")
+        hprinterdc.StartPage()
+
+        # Create a font object
+        font = win32ui.CreateFont({
+            "name": "Arial",
+            "height": int(-font_size * 10),  # Font size in pt
+        })
+        hprinterdc.SelectObject(font)
+
+        # Print the serial number
+        hprinterdc.TextOut(100, 100, f"Serial Number: {serial_number}")
+
+        hprinterdc.EndPage()
+        hprinterdc.EndDoc()
+        hprinterdc.DeleteDC()
+        win32print.ClosePrinter(hprinter)
+        st.success(f"Serial Number '{serial_number}' printed successfully.")
+    except Exception as e:
+        st.error(f"Failed to print: {e}")
+
 
 # Function to render calibration forms
 def render_ph_calibration():
