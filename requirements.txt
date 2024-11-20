@@ -8,5 +8,4 @@ pydrive
 streamlit-authenticator
 python-dotenv
 plotly
-pywin32
 
