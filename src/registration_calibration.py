@@ -194,24 +194,41 @@ def registration_calibration_page():
         <div style="font-family: Arial; font-size: 16px; margin-bottom: 20px;">
             Generated Serial Number: 
             <span id="serial-number" style="font-weight: bold; cursor: pointer; color: blue;"
-                  onclick="printSerialNumber()">{serial_number}</span>
+                  onclick="navigator.clipboard.writeText('{serial_number}').then(() => {{
+                      const printWindow = window.open('', '_blank');
+                      printWindow.document.write(`
+                          <html>
+                              <head>
+                                  <title>Print Serial Number</title>
+                                  <style>
+                                      body {{
+                                          font-family: Arial, sans-serif;
+                                          display: flex;
+                                          justify-content: center;
+                                          align-items: center;
+                                          height: 100vh;
+                                          margin: 0;
+                                      }}
+                                      .serial-container {{
+                                          text-align: center;
+                                          padding: 20px;
+                                          border: 1px solid #ccc;
+                                      }}
+                                  </style>
+                              </head>
+                              <body>
+                                  <div class="serial-container">
+                                      <h1 style="font-size: 24px;">Serial Number:</h1>
+                                      <p style="font-size: 36px; font-weight: bold;">{serial_number}</p>
+                                  </div>
+                              </body>
+                          </html>
+                      `);
+                      printWindow.document.close();
+                      printWindow.print();
+                  }});">{serial_number}</span>
+            <span style="margin-left: 10px; font-size: 12px; color: #666;">(Click to print)</span>
         </div>
-        <script>
-            const printSerialNumber = () => {{
-                const serialNumber = document.getElementById('serial-number').textContent;
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(`
-                    <html>
-                        <head><title>Print Serial Number</title></head>
-                        <body>
-                            <h1 style="font-family: Arial; font-size: 16px;">Serial Number: ${serialNumber}</h1>
-                        </body>
-                    </html>
-                `);
-                printWindow.document.close();
-                printWindow.print();
-            }};
-        </script>
     """, unsafe_allow_html=True)
 
 
