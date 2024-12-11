@@ -9,7 +9,7 @@ from datetime import datetime
 from src.drive_manager import DriveManager
 from src.inventory_review import inventory_review_page
 from src.inventory_manager import initialize_inventory
-from src.registration_page import registration_page  # Updated import
+from src.registration_page import registration_page  
 from src.calibration_page import calibration_page   # Updated import
 
 # Configure logging
